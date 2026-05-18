@@ -1,0 +1,98 @@
+name: Build Native Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up GraalVM JDK 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm-community'
+          native-image-job-reports: 'true'
+
+      - name: Build Fat-JAR + Windows Binary
+        shell: cmd
+        run: build.bat
+
+      - name: Upload Windows binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: meindrk-cli-windows-x64
+          path: build/meindrk-cli-windows-x64.exe
+
+  build-linux:
+    name: Linux x64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up GraalVM JDK 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm-community'
+          native-image-job-reports: 'true'
+
+      - name: Build Linux Binary
+        run: |
+          chmod +x build-linux.sh
+          ./build-linux.sh
+
+      - name: Upload Linux binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: meindrk-cli-linux-x64
+          path: build/meindrk-cli-linux-x64
+
+  build-macos:
+    name: macOS Universal
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up GraalVM JDK 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm-community'
+          native-image-job-reports: 'true'
+
+      - name: Build macOS Universal Binary
+        run: |
+          chmod +x build-macos.sh
+          ./build-macos.sh
+
+      - name: Upload macOS binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: meindrk-cli-macos-universal
+          path: build/meindrk-cli-macos-universal
+
+  release:
+    name: Create Release
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/meindrk-cli-windows-x64/meindrk-cli-windows-x64.exe
+            artifacts/meindrk-cli-linux-x64/meindrk-cli-linux-x64
+            artifacts/meindrk-cli-macos-universal/meindrk-cli-macos-universal
