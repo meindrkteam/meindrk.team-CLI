@@ -27,10 +27,15 @@ public class RestClient {
             .build ();
     }
 
-    public JsonNode login (String password) throws Exception {
-        String params = "login=" + enc (config.getLogin ())
-            + "&password=" + enc (password)
-            + "&kreisverbandID=" + config.getKvid ();
+    public JsonNode login (String password, String token, String uuid) throws Exception {
+        StringBuilder params = new StringBuilder ()
+            .append ("login=").append (enc (config.getLogin ()))
+            .append ("&password=").append (enc (password))
+            .append ("&kreisverbandID=").append (enc (config.getKvid ()));
+        if (uuid != null)
+            params.append ("&uuid=").append (enc (uuid));
+        if (token != null && !token.isBlank ())
+            params.append ("&token=").append (enc (token));
 
         HttpRequest req = HttpRequest.newBuilder ()
             .uri (URI.create (config.getUrl () + "/backend/rest/app/login?" + params))
@@ -39,7 +44,6 @@ public class RestClient {
 
         HttpResponse<String> resp = http.send (req, HttpResponse.BodyHandlers.ofString ());
 
-        // Persist session cookie for subsequent requests
         resp.headers ().allValues ("set-cookie").forEach (header -> {
             for (String part : header.split (";")) {
                 part = part.trim ();

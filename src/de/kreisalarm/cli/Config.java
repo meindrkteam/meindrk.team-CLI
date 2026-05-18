@@ -38,9 +38,11 @@ public class Config {
     public String getLogin () { return get ("login"); }
     public String getSession () { return get ("session"); }
     public String getKvid () { return get ("kvid"); }
+    public String getUuid () { return get ("uuid"); }
 
     public void setUrl (String url) { set ("url", url); }
     public void setLogin (String login) { set ("login", login); }
     public void setSession (String session) { set ("session", session); }
     public void setKvid (String kvid) { set ("kvid", kvid); }
+    public void setUuid (String uuid) { set ("uuid", uuid); }
 }
