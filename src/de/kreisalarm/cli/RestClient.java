@@ -3,13 +3,19 @@ package de.kreisalarm.cli;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509ExtendedTrustManager;
 import java.net.CookieManager;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.X509Certificate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -19,12 +25,31 @@ public class RestClient {
     private final Config config;
     private final HttpClient http;
 
-    public RestClient (Config config) {
+    public RestClient (Config config) throws Exception {
+        this(config, false);
+    }
+
+    public RestClient (Config config, boolean insecure) throws Exception {
         this.config = config;
-        this.http = HttpClient.newBuilder ()
+        HttpClient.Builder builder = HttpClient.newBuilder ()
             .cookieHandler (new CookieManager ())
-            .followRedirects (HttpClient.Redirect.NORMAL)
-            .build ();
+            .followRedirects (HttpClient.Redirect.NORMAL);
+        if (insecure) {
+            // X509ExtendedTrustManager verhindert, dass Java einen AbstractTrustManagerWrapper
+            // darum legt, der Hostname-Prüfung trotzdem erzwingen würde.
+            SSLContext ctx = SSLContext.getInstance ("TLS");
+            ctx.init (null, new TrustManager[]{ new X509ExtendedTrustManager () {
+                public void checkClientTrusted (X509Certificate[] c, String a) {}
+                public void checkServerTrusted (X509Certificate[] c, String a) {}
+                public void checkClientTrusted (X509Certificate[] c, String a, Socket s) {}
+                public void checkServerTrusted (X509Certificate[] c, String a, Socket s) {}
+                public void checkClientTrusted (X509Certificate[] c, String a, SSLEngine e) {}
+                public void checkServerTrusted (X509Certificate[] c, String a, SSLEngine e) {}
+                public X509Certificate[] getAcceptedIssuers () { return new X509Certificate[0]; }
+            }}, null);
+            builder.sslContext (ctx);
+        }
+        this.http = builder.build ();
     }
 
     public JsonNode login (String password, String token, String uuid) throws Exception {

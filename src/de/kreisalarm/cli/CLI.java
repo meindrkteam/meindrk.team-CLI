@@ -49,7 +49,8 @@ public class CLI {
             System.exit (1);
         }
 
-        RestClient client = new RestClient (config);
+        boolean insecure = hasFlag (args, "--insecure");
+        RestClient client = new RestClient (config, insecure);
 
         switch (cmd) {
             case "login":
@@ -246,6 +247,12 @@ public class CLI {
         return defaultValue;
     }
 
+    private static boolean hasFlag (String[] args, String flag) {
+        for (String arg : args)
+            if (flag.equals (arg)) return true;
+        return false;
+    }
+
     private static String sub (String[] args) {
         return args.length >= 2 ? args[1] : "list";
     }
@@ -267,6 +274,9 @@ public class CLI {
         System.out.println ("  gruppe  list [--kvid <id>] [--q <text>]  Gruppen auflisten");
         System.out.println ("  benutzer list [--kvid <id>]            Admin-Benutzer auflisten");
         System.out.println ("  help                                   Diese Hilfe");
+        System.out.println ();
+        System.out.println ("Globale Optionen:");
+        System.out.println ("  --insecure   TLS-Zertifikat nicht prüfen (für lokale Entwicklungsserver)");
         System.out.println ();
         System.out.println ("Beispiel:");
         System.out.println ("  cli setup");
