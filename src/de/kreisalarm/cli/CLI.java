@@ -1,6 +1,8 @@
 package de.kreisalarm.cli;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.Console;
 import java.util.UUID;
@@ -24,13 +26,16 @@ import java.util.UUID;
  */
 public class CLI {
 
+    private static final ObjectMapper MAPPER = new ObjectMapper ();
+
     public static void main (String[] args) throws Exception {
-        if (args.length == 0) {
+        boolean json = hasFlag (args, "--json");
+
+        String cmd = positional (args, 0);
+        if (cmd == null) {
             printHelp ();
             return;
         }
-
-        String cmd = args[0];
 
         if ("help".equals (cmd)) {
             printHelp ();
@@ -40,13 +45,13 @@ public class CLI {
         Config config = new Config ();
 
         if ("setup".equals (cmd)) {
-            runSetup (config);
+            runSetup (config, json);
             return;
         }
 
         if (config.getUrl () == null) {
-            System.err.println ("Nicht konfiguriert. Bitte zuerst 'cli setup' ausführen.");
-            System.exit (1);
+            exitWithError ("Nicht konfiguriert. Bitte zuerst 'cli setup' ausführen oder MEINDRK_URL setzen.", json);
+            return;
         }
 
         boolean insecure = hasFlag (args, "--insecure");
@@ -54,24 +59,22 @@ public class CLI {
 
         switch (cmd) {
             case "login":
-                runLogin (client, config, args);
+                runLogin (client, config, args, json);
                 break;
             case "projekt":
-                runProjekt (client, args);
+                runProjekt (client, args, json);
                 break;
             case "person":
-                runPerson (client, args);
+                runPerson (client, args, json);
                 break;
             case "gruppe":
-                runGruppe (client, args);
+                runGruppe (client, args, json);
                 break;
             case "benutzer":
-                runBenutzer (client, args);
+                runBenutzer (client, args, json);
                 break;
             default:
-                System.err.println ("Unbekannter Befehl: " + cmd);
-                printHelp ();
-                System.exit (1);
+                exitWithError ("Unbekannter Befehl: " + cmd, json);
         }
     }
 
@@ -254,11 +257,53 @@ public class CLI {
     }
 
     private static String sub (String[] args) {
-        return args.length >= 2 ? args[1] : "list";
+        String s = positional (args, 1);
+        return s != null ? s : "list";
     }
 
     private static void requireSub (String[] args, String fallback) {
         // nothing to enforce – defaults to fallback via sub()
+    }
+
+    private static String positional (String[] args, int n) {
+        int count = 0;
+        for (String arg : args) {
+            if (!arg.startsWith ("--")) {
+                if (count == n) return arg;
+                count++;
+            }
+        }
+        return null;
+    }
+
+    private static void exitWithError (String msg, boolean json) {
+        if (json) {
+            System.err.println ("{\"ok\":false,\"error\":" + jsonStr (msg) + "}");
+        } else {
+            System.err.println (msg);
+        }
+        System.exit (1);
+    }
+
+    private static String jsonStr (String s) {
+        if (s == null) s = "";
+        return "\"" + s.replace ("\\", "\\\\").replace ("\"", "\\\"").replace ("\n", "\\n") + "\"";
+    }
+
+    private static void printResult (JsonNode data, String[] columns, boolean json) {
+        if (json) {
+            ObjectNode envelope = MAPPER.createObjectNode ();
+            envelope.put ("ok", true);
+            envelope.set ("data", data);
+            envelope.put ("count", data.isArray () ? data.size () : 1);
+            System.out.println (envelope.toString ());
+        } else {
+            if (columns != null) {
+                TablePrinter.print (data, columns);
+            } else {
+                TablePrinter.printObject (data);
+            }
+        }
     }
 
     private static void printHelp () {
