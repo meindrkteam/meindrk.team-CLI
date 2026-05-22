@@ -34,11 +34,14 @@ public class Config {
         }
     }
 
-    public String getUrl () { return get ("url"); }
-    public String getLogin () { return get ("login"); }
-    public String getSession () { return get ("session"); }
-    public String getKvid () { return get ("kvid"); }
-    public String getUuid () { return get ("uuid"); }
+    private static String env (String key) { return System.getenv (key); }
+
+    public String getUrl ()      { String e = env ("MEINDRK_URL");      return e != null ? e : get ("url"); }
+    public String getLogin ()    { String e = env ("MEINDRK_LOGIN");    return e != null ? e : get ("login"); }
+    public String getSession ()  { String e = env ("MEINDRK_SESSION");  return e != null ? e : get ("session"); }
+    public String getKvid ()     { String e = env ("MEINDRK_KVID");     return e != null ? e : get ("kvid"); }
+    public String getUuid ()     { return get ("uuid"); }
+    public String getPassword () { return env ("MEINDRK_PASSWORD"); }
 
     public void setUrl (String url) { set ("url", url); }
     public void setLogin (String login) { set ("login", login); }
