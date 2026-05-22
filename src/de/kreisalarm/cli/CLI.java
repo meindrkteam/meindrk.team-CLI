@@ -82,7 +82,11 @@ public class CLI {
     // setup
     // -------------------------------------------------------------------------
 
-    private static void runSetup (Config config) throws Exception {
+    private static void runSetup (Config config, boolean json) throws Exception {
+        if (json) {
+            exitWithError ("setup erfordert ein interaktives Terminal. Verwende stattdessen Umgebungsvariablen: MEINDRK_URL, MEINDRK_LOGIN, MEINDRK_KVID", json);
+            return;
+        }
         Console console = System.console ();
         if (console == null) {
             System.err.println ("Kein Terminal – bitte URL, Login und KVID direkt in ~/.meindrk-cli.properties eintragen.");
@@ -112,21 +116,21 @@ public class CLI {
     // login
     // -------------------------------------------------------------------------
 
-    private static void runLogin (RestClient client, Config config, String[] args) throws Exception {
+    private static void runLogin (RestClient client, Config config, String[] args, boolean json) throws Exception {
         String password = arg (args, "--password", null);
         String token    = arg (args, "--token", null);
+
+        if (password == null) password = config.getPassword ();
 
         if (password == null) {
             Console console = System.console ();
             if (console == null) {
-                System.err.println ("Kein Terminal – bitte --password <pw> angeben.");
-                System.exit (1);
+                exitWithError ("Kein Terminal – bitte --password <pw> oder MEINDRK_PASSWORD setzen.", json);
+                return;
             }
             password = new String (console.readPassword ("Passwort für %s: ", config.getLogin ()));
         }
 
-        // UUID identifiziert dieses Gerät dauerhaft; nach einmalig erfolgter 2FA wird es vom Server
-        // als vertrauenswürdig gespeichert und 2FA bei späteren Logins übersprungen.
         if (config.getUuid () == null) {
             config.setUuid (UUID.randomUUID ().toString ());
             config.save ();
@@ -138,14 +142,11 @@ public class CLI {
         if (!result.path ("success").asBoolean (false)) {
             if ("missing google-authentification-token".equals (reason)
                     || "wrong google authentification code".equals (reason)) {
-                if (token != null) {
-                    System.err.println ("Falscher Google-Authenticator-Code.");
-                    System.exit (1);
-                }
+                if (token != null) { exitWithError ("Falscher Google-Authenticator-Code.", json); return; }
                 Console console = System.console ();
                 if (console == null) {
-                    System.err.println ("Google Authenticator erforderlich – bitte --token <6-stelliger-code> angeben.");
-                    System.exit (1);
+                    exitWithError ("Google Authenticator erforderlich – bitte --token <6-stelliger-code> angeben.", json);
+                    return;
                 }
                 token = console.readLine ("Google Authenticator Code: ").trim ();
                 result = client.login (password, token, config.getUuid ());
@@ -153,14 +154,11 @@ public class CLI {
 
             } else if ("missing email-token".equals (reason)
                     || "wrong email code".equals (reason)) {
-                if (token != null) {
-                    System.err.println ("Falscher E-Mail-Code.");
-                    System.exit (1);
-                }
+                if (token != null) { exitWithError ("Falscher E-Mail-Code.", json); return; }
                 Console console = System.console ();
                 if (console == null) {
-                    System.err.println ("E-Mail-2FA erforderlich – bitte --token <code> angeben.");
-                    System.exit (1);
+                    exitWithError ("E-Mail-2FA erforderlich – bitte --token <code> angeben.", json);
+                    return;
                 }
                 System.out.println ("Ein Code wurde per E-Mail gesendet.");
                 token = console.readLine ("E-Mail Code: ").trim ();
@@ -171,11 +169,15 @@ public class CLI {
 
         if (result.path ("success").asBoolean (false)) {
             JsonNode user = result.path ("user");
-            System.out.println ("Eingeloggt als " + user.path ("vorname").asText () + " " + user.path ("nachname").asText ()
-                + " (Projekt " + user.path ("projektID").asText () + ")");
+            if (json) {
+                printResult (user, null, true);
+            } else {
+                System.out.println ("Eingeloggt als " + user.path ("vorname").asText ()
+                    + " " + user.path ("nachname").asText ()
+                    + " (Projekt " + user.path ("projektID").asText () + ")");
+            }
         } else {
-            System.err.println ("Login fehlgeschlagen: " + reason);
-            System.exit (1);
+            exitWithError ("Login fehlgeschlagen: " + reason, json);
         }
     }
 
@@ -183,17 +185,16 @@ public class CLI {
     // projekt
     // -------------------------------------------------------------------------
 
-    private static void runProjekt (RestClient client, String[] args) throws Exception {
-        requireSub (args, "list");
+    private static void runProjekt (RestClient client, String[] args, boolean json) throws Exception {
         JsonNode result = client.getList ("Projekt", 1000, null, null);
-        TablePrinter.print (result.path ("root"), new String[]{"id", "name", "organisation", "prefix"});
+        printResult (result.path ("root"), new String[]{"id", "name", "organisation", "prefix"}, json);
     }
 
     // -------------------------------------------------------------------------
     // person
     // -------------------------------------------------------------------------
 
-    private static void runPerson (RestClient client, String[] args) throws Exception {
+    private static void runPerson (RestClient client, String[] args, boolean json) throws Exception {
         String sub = sub (args);
         switch (sub) {
             case "list":
@@ -201,17 +202,17 @@ public class CLI {
                 String query = arg (args, "--q",     null);
                 int limit    = Integer.parseInt (arg (args, "--limit", "100"));
                 JsonNode list = client.getList ("Person", limit, query, kvid);
-                TablePrinter.print (list.path ("root"),
-                    new String[]{"id", "projektID", "nachname", "vorname", "geburtsdatum", "status", "aktiv"});
+                printResult (list.path ("root"),
+                    new String[]{"id", "projektID", "nachname", "vorname", "geburtsdatum", "status", "aktiv"}, json);
                 break;
             case "get":
-                if (args.length < 3) { System.err.println ("Person-ID fehlt."); System.exit (1); }
-                JsonNode person = client.get ("/backend/rest/Person/" + args[2]);
-                TablePrinter.printObject (person);
+                String id = positional (args, 2);
+                if (id == null) { exitWithError ("Person-ID fehlt.", json); return; }
+                JsonNode person = client.get ("/backend/rest/Person/" + id);
+                printResult (person, null, json);
                 break;
             default:
-                System.err.println ("Unbekannter Subbefehl: " + sub);
-                System.exit (1);
+                exitWithError ("Unbekannter Subbefehl: " + sub, json);
         }
     }
 
@@ -219,24 +220,22 @@ public class CLI {
     // gruppe
     // -------------------------------------------------------------------------
 
-    private static void runGruppe (RestClient client, String[] args) throws Exception {
-        requireSub (args, "list");
+    private static void runGruppe (RestClient client, String[] args, boolean json) throws Exception {
         String kvid  = arg (args, "--kvid", null);
         String query = arg (args, "--q",    null);
         JsonNode result = client.getList ("Gruppe", 1000, query, kvid);
-        TablePrinter.print (result.path ("root"), new String[]{"id", "projektID", "name"});
+        printResult (result.path ("root"), new String[]{"id", "projektID", "name"}, json);
     }
 
     // -------------------------------------------------------------------------
     // benutzer
     // -------------------------------------------------------------------------
 
-    private static void runBenutzer (RestClient client, String[] args) throws Exception {
-        requireSub (args, "list");
+    private static void runBenutzer (RestClient client, String[] args, boolean json) throws Exception {
         String kvid = arg (args, "--kvid", null);
         JsonNode result = client.getList ("Benutzer", 1000, null, kvid);
-        TablePrinter.print (result.path ("root"),
-            new String[]{"id", "projektID", "login", "vorname", "nachname", "email", "deaktiviert"});
+        printResult (result.path ("root"),
+            new String[]{"id", "projektID", "login", "vorname", "nachname", "email", "deaktiviert"}, json);
     }
 
     // -------------------------------------------------------------------------
@@ -322,11 +321,13 @@ public class CLI {
         System.out.println ();
         System.out.println ("Globale Optionen:");
         System.out.println ("  --insecure   TLS-Zertifikat nicht prüfen (für lokale Entwicklungsserver)");
+        System.out.println ("  --json       Ausgabe als JSON-Envelope {\"ok\":true,\"data\":...} fuer Agenten/Skripte");
         System.out.println ();
         System.out.println ("Beispiel:");
         System.out.println ("  cli setup");
         System.out.println ("  cli login");
         System.out.println ("  cli person list --q Müller --limit 20");
         System.out.println ("  cli person get 12345");
+        System.out.println ("  cli --json person list --q Müller");
     }
 }
