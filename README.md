@@ -204,3 +204,49 @@ Die Datei `~/.meindrk-cli.properties` enthält:
 | `kvid` | Standard-Kreisverband-ID |
 | `session` | Gespeicherte Session-ID (wird automatisch verwaltet) |
 | `uuid` | Geräte-UUID für 2FA-Vertrauensstatus (wird automatisch generiert) |
+
+---
+
+## Agenten & Skripte
+
+Für nicht-interaktive Umgebungen (KI-Agenten, CI/CD) können alle Verbindungsdaten
+als Umgebungsvariablen gesetzt werden — eine `~/.meindrk-cli.properties` ist dann
+nicht erforderlich.
+
+| Env-Var | Entspricht | Beschreibung |
+|---------|-----------|-------------|
+| `MEINDRK_URL` | `url` | Server-URL |
+| `MEINDRK_LOGIN` | `login` | Benutzername |
+| `MEINDRK_KVID` | `kvid` | Standard-Kreisverband-ID |
+| `MEINDRK_SESSION` | `session` | Gespeicherte Session-ID |
+| `MEINDRK_PASSWORD` | — | Passwort (nur für `login`, nie gespeichert) |
+
+**Priorität:** Env-Var > Konfigurationsdatei > interaktiver Prompt
+
+### JSON-Ausgabe (`--json`)
+
+Der globale Flag `--json` schaltet alle Ausgaben auf ein maschinenlesbares
+Envelope-Format um:
+
+Erfolg (stdout):
+
+    { "ok": true,  "data": [...], "count": 3 }
+    { "ok": false, "error": "Fehlermeldung"  }
+
+Fehler (stderr). Exit-Code ist bei Fehlern immer `1`.
+
+Beispiel-Workflow für Agenten:
+
+    export MEINDRK_URL=https://server.kreisalarm.de
+    export MEINDRK_LOGIN=admin
+    export MEINDRK_PASSWORD=geheim
+
+    cli login --json
+    # stdout: {"ok":true,"data":{"vorname":"Max","nachname":"Muster","projektID":"42"},"count":1}
+
+    cli --json person list --q Mueller
+    # stdout: {"ok":true,"data":[...],"count":2}
+
+    cli --json person list   # ohne gueltige Session
+    # stderr: {"ok":false,"error":"Nicht authentifiziert – bitte mit 'cli login' einloggen."}
+    # exit: 1
