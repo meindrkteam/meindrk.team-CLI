@@ -14,7 +14,7 @@ TMP_DIR="$SCRIPT_DIR/tmp"
 
 mkdir -p "$TMP_DIR/classes" "$TMP_DIR/fat" "$BUILD_DIR"
 
-echo "[1/4] Kompiliere Java-Quellen..."
+echo "[1/5] Kompiliere Java-Quellen..."
 javac --release 21 \
     -cp "$LIB_DIR/*" \
     -d "$TMP_DIR/classes" \
@@ -23,18 +23,27 @@ javac --release 21 \
     "$SRC_DIR/de/kreisalarm/cli/TablePrinter.java" \
     "$SRC_DIR/de/kreisalarm/cli/CLI.java"
 
-echo "[2/4] Baue Fat-JAR..."
+echo "[2/5] Baue Fat-JAR..."
 (cd "$TMP_DIR/fat" && for f in "$LIB_DIR"/jackson-{core,annotations,databind}-*.jar; do jar xf "$f"; done)
 cp -r "$TMP_DIR/classes/." "$TMP_DIR/fat/"
 printf 'Main-Class: de.kreisalarm.cli.CLI\n\n' > "$TMP_DIR/MANIFEST.MF"
 jar cfm "$TMP_DIR/meindrk-cli.jar" "$TMP_DIR/MANIFEST.MF" -C "$TMP_DIR/fat" .
 
-echo "[3/4] Baue Linux x64 Binary..."
+echo "[3/5] Baue Linux x64 Binary..."
 native-image \
     -jar "$TMP_DIR/meindrk-cli.jar" \
     --no-fallback \
     --enable-url-protocols=https \
-    -H:Name=meindrk-cli-linux-x64 \
-    -H:Path="$BUILD_DIR"
+    -O1 \
+    --strict-image-heap \
+    --initialize-at-build-time=com.fasterxml.jackson.annotation,com.fasterxml.jackson.core,com.fasterxml.jackson.databind \
+    -o "$BUILD_DIR/meindrk-cli-linux-x64"
 
-echo "[4/4] Fertig: $BUILD_DIR/meindrk-cli-linux-x64"
+echo "[4/5] UPX-Komprimierung (optional)..."
+if command -v upx &>/dev/null; then
+    upx --best "$BUILD_DIR/meindrk-cli-linux-x64" && echo "    OK" || echo "    WARNUNG: UPX fehlgeschlagen - Binary bleibt unkomprimiert."
+else
+    echo "    UPX nicht gefunden - uebersprungen. Install: apt install upx-ucl"
+fi
+
+echo "[5/5] Fertig: $BUILD_DIR/meindrk-cli-linux-x64"

@@ -149,9 +149,25 @@ echo.
 echo [3/4] Baue Windows x64 Binary...
 mkdir "%BUILD_DIR%" 2>nul
 
-"%NATIVE_IMAGE%" -jar "%JAR_FILE%" --no-fallback --enable-url-protocols=https -H:+UnlockExperimentalVMOptions -H:Name=meindrk-cli-windows-x64 -H:Path="%BUILD_DIR%"
+"%NATIVE_IMAGE%" -jar "%JAR_FILE%" ^
+    --no-fallback ^
+    --enable-url-protocols=https ^
+    -O1 ^
+    --strict-image-heap ^
+    --initialize-at-build-time=com.fasterxml.jackson.annotation,com.fasterxml.jackson.core,com.fasterxml.jackson.databind ^
+    -o "%BUILD_DIR%\meindrk-cli-windows-x64"
 if errorlevel 1 ( echo FEHLER beim Windows-Build. & exit /b 1 )
 echo     OK
+
+echo.
+echo [3b/4] UPX-Komprimierung (optional)...
+where upx >nul 2>&1
+if not errorlevel 1 (
+    upx --best "%BUILD_DIR%\meindrk-cli-windows-x64.exe"
+    if errorlevel 1 ( echo     WARNUNG: UPX fehlgeschlagen - Binary bleibt unkomprimiert. ) else ( echo     OK )
+) else (
+    echo     UPX nicht gefunden - uebersprungen. Install: winget install upx
+)
 
 :: ===========================================================================
 :: 4) Linux x64 (via Docker)
@@ -164,7 +180,7 @@ if errorlevel 1 (
     echo     Alternativen: build-linux.sh auf Linux oder GitHub Actions pushen.
     goto :done
 )
-docker run --rm -v "%TMP_DIR%:/work/tmp" -v "%BUILD_DIR%:/work/build" -w /work/build ghcr.io/graalvm/native-image:21 --no-fallback --enable-url-protocols=https -jar /work/tmp/meindrk-cli.jar -H:Name=meindrk-cli-linux-x64 -H:Path=/work/build
+docker run --rm -v "%TMP_DIR%:/work/tmp" -v "%BUILD_DIR%:/work/build" ghcr.io/graalvm/native-image:21 -jar /work/tmp/meindrk-cli.jar --no-fallback --enable-url-protocols=https -O1 --strict-image-heap --initialize-at-build-time=com.fasterxml.jackson.annotation,com.fasterxml.jackson.core,com.fasterxml.jackson.databind -o /work/build/meindrk-cli-linux-x64
 if errorlevel 1 ( echo FEHLER beim Linux-Docker-Build. ) else ( echo     OK )
 
 :done

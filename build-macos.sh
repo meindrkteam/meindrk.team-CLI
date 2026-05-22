@@ -51,8 +51,10 @@ echo "[3/5] Baue macOS arm64 Binary..."
     -jar "$TMP_DIR/meindrk-cli.jar" \
     --no-fallback \
     --enable-url-protocols=https \
-    -H:Name=meindrk-cli-macos-arm64 \
-    -H:Path="$BUILD_DIR"
+    -O1 \
+    --strict-image-heap \
+    --initialize-at-build-time=com.fasterxml.jackson.annotation,com.fasterxml.jackson.core,com.fasterxml.jackson.databind \
+    -o "$BUILD_DIR/meindrk-cli-macos-arm64"
 
 echo "[4/5] Baue macOS x86_64 Binary..."
 # Erzwingt x86_64-Build auf Apple Silicon via Rosetta
@@ -60,8 +62,10 @@ arch -x86_64 "$NATIVE_IMAGE" \
     -jar "$TMP_DIR/meindrk-cli.jar" \
     --no-fallback \
     --enable-url-protocols=https \
-    -H:Name=meindrk-cli-macos-x64 \
-    -H:Path="$BUILD_DIR"
+    -O1 \
+    --strict-image-heap \
+    --initialize-at-build-time=com.fasterxml.jackson.annotation,com.fasterxml.jackson.core,com.fasterxml.jackson.databind \
+    -o "$BUILD_DIR/meindrk-cli-macos-x64"
 
 echo "[5/5] Erstelle Universal Binary..."
 lipo -create -output "$BUILD_DIR/meindrk-cli-macos-universal" \
