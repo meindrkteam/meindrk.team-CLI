@@ -29,6 +29,10 @@ public class CLI {
     private static final ObjectMapper MAPPER = new ObjectMapper ();
 
     public static void main (String[] args) throws Exception {
+        if (GuiDetector.isGuiLaunch (args)) {
+            GuiServer.start (new Config ());
+            return;
+        }
         boolean json = hasFlag (args, "--json");
 
         String cmd = positional (args, 0);
