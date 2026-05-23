@@ -75,6 +75,8 @@ jobs:
             src/de/kreisalarm/cli/Config.java \
             src/de/kreisalarm/cli/RestClient.java \
             src/de/kreisalarm/cli/TablePrinter.java \
+            src/de/kreisalarm/cli/GuiDetector.java \
+            src/de/kreisalarm/cli/GuiServer.java \
             src/de/kreisalarm/cli/CLI.java
           (cd tmp/fat && for f in ../../lib/jackson/jackson-{core,annotations,databind}-*.jar; do jar xf "$f"; done)
           cp -r tmp/classes/. tmp/fat/
