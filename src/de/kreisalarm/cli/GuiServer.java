@@ -311,7 +311,7 @@ function renderRes(cmd,data){
   h+='</tr></thead><tbody>';
   data.forEach(function(row){
     var rid=row.id;
-    h+='<tr'+(cmd==='person list'?' onclick="selP('+rid+')"':'')+' >';
+    h+='<tr'+(cmd==='person list'?' onclick="selP('+parseInt(rid,10)+')"':'')+' >';
     cols.forEach(function(c){
       var v=row[c]!=null?String(row[c]):'';
       if(c==='aktiv'||c==='deaktiviert'){
@@ -529,7 +529,6 @@ function esc(s){
     private static void sendJson (HttpExchange ex, String json) throws IOException {
         byte[] body = json.getBytes (StandardCharsets.UTF_8);
         ex.getResponseHeaders ().set ("Content-Type", "application/json; charset=UTF-8");
-        ex.getResponseHeaders ().set ("Access-Control-Allow-Origin", "*");
         ex.sendResponseHeaders (200, body.length);
         try (var out = ex.getResponseBody ()) { out.write (body); }
     }
