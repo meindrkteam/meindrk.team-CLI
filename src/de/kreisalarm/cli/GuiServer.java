@@ -156,7 +156,7 @@ window.onload=function(){
 
 function togUrl(){
   var e=document.getElementById('ue'),l=document.getElementById('ul');
-  l.textContent=e.classList.toggle('open')?'einklappen ▴':'&#228;ndern ▾'
+  l.textContent=e.classList.toggle('open')?'einklappen ▴':'ändern ▾'
 }
 
 function setUD(u){
@@ -468,7 +468,7 @@ function esc(s){
                     ? "Login fehlgeschlagen" : reason) + "\"}");
             }
         } catch (Exception e) {
-            sendJson (ex, "{\"ok\":false,\"error\":" + jstr (e.getMessage ()) + "}");
+            sendJson (ex, "{\"ok\":false,\"error\":\"" + jstr (e.getMessage ()) + "\"}");
         }
     }
 
@@ -516,7 +516,7 @@ function esc(s){
             env.put ("count", data.isArray () ? data.size () : 1);
             sendJson (ex, env.toString ());
         } catch (Exception e) {
-            sendJson (ex, "{\"ok\":false,\"error\":" + jstr (e.getMessage ()) + "}");
+            sendJson (ex, "{\"ok\":false,\"error\":\"" + jstr (e.getMessage ()) + "\"}");
         }
     }
 
