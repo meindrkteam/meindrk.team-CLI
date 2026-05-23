@@ -119,7 +119,7 @@ echo [1/4] Kompiliere Java-Quellen...
 powershell -NoProfile -Command "Remove-Item '%TMP_DIR%' -Recurse -Force -ErrorAction SilentlyContinue"
 mkdir "%TMP_DIR%\classes"
 
-"%JAVAC%" --release 21 -cp "%LIB_DIR%\*" -d "%TMP_DIR%\classes" "%SRC_DIR%\de\kreisalarm\cli\Config.java" "%SRC_DIR%\de\kreisalarm\cli\RestClient.java" "%SRC_DIR%\de\kreisalarm\cli\TablePrinter.java" "%SRC_DIR%\de\kreisalarm\cli\CLI.java"
+"%JAVAC%" --release 21 -cp "%LIB_DIR%\*" -d "%TMP_DIR%\classes" "%SRC_DIR%\de\kreisalarm\cli\Config.java" "%SRC_DIR%\de\kreisalarm\cli\RestClient.java" "%SRC_DIR%\de\kreisalarm\cli\TablePrinter.java" "%SRC_DIR%\de\kreisalarm\cli\GuiDetector.java" "%SRC_DIR%\de\kreisalarm\cli\GuiServer.java" "%SRC_DIR%\de\kreisalarm\cli\CLI.java"
 if errorlevel 1 ( echo FEHLER beim Kompilieren. & exit /b 1 )
 echo     OK
 

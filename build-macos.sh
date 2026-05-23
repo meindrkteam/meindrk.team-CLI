@@ -38,6 +38,8 @@ echo "[1/5] Kompiliere Java-Quellen..."
     "$SRC_DIR/de/kreisalarm/cli/Config.java" \
     "$SRC_DIR/de/kreisalarm/cli/RestClient.java" \
     "$SRC_DIR/de/kreisalarm/cli/TablePrinter.java" \
+    "$SRC_DIR/de/kreisalarm/cli/GuiDetector.java" \
+    "$SRC_DIR/de/kreisalarm/cli/GuiServer.java" \
     "$SRC_DIR/de/kreisalarm/cli/CLI.java"
 
 echo "[2/5] Baue Fat-JAR..."
