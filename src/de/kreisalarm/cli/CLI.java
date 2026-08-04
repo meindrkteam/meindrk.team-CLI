@@ -29,11 +29,34 @@ public class CLI {
     private static final ObjectMapper MAPPER = new ObjectMapper ();
 
     public static void main (String[] args) throws Exception {
+        boolean json = hasFlag (args, "--json");
+        try {
+            run (args, json);
+        } catch (Exception e) {
+            exitWithError (beschreibe (e), json);
+        }
+    }
+
+    /** Uebersetzt technische Ausnahmen in eine Meldung fuer Menschen und Agenten.
+     *  Nie Stacktrace, nie Klassennamen — der Aufrufer parst das als JSON. */
+    private static String beschreibe (Exception e) {
+        if (e instanceof java.net.ConnectException)
+            return "Server nicht erreichbar.";
+        if (e instanceof java.net.UnknownHostException)
+            return "Server-Adresse unbekannt: " + e.getMessage ();
+        if (e instanceof javax.net.ssl.SSLException)
+            return "TLS-Fehler: " + e.getMessage () + " (bei lokalen Servern hilft --insecure)";
+        if (e instanceof java.net.http.HttpTimeoutException)
+            return "Zeitueberschreitung beim Server.";
+        String m = e.getMessage ();
+        return (m == null || m.isBlank ()) ? "Unerwarteter Fehler." : m;
+    }
+
+    private static void run (String[] args, boolean json) throws Exception {
         if (GuiDetector.isGuiLaunch (args)) {
             GuiServer.start (new Config ());
             return;
         }
-        boolean json = hasFlag (args, "--json");
 
         String cmd = positional (args, 0);
         if (cmd == null) {
