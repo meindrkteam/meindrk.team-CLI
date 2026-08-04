@@ -357,22 +357,22 @@ public class CLI {
 
         ObjectNode personList = befehl (cmds, "person_list",
             "Personen (Mitglieder) eines Kreisverbands suchen oder auflisten.");
-        param (personList, "q",     "string",  false, null, "Suchtext, meist der Nachname");
-        param (personList, "kvid",  "string",  false, null, "Kreisverband-ID; leer = Standard des Benutzers");
-        param (personList, "limit", "integer", false, "100", "Maximale Trefferzahl");
+        param (personList, "q",     "string",  false, null,  "flag", "Suchtext, meist der Nachname");
+        param (personList, "kvid",  "string",  false, null,  "flag", "Kreisverband-ID; leer = Standard des Benutzers");
+        param (personList, "limit", "integer", false, "100", "flag", "Maximale Trefferzahl");
 
         ObjectNode personGet = befehl (cmds, "person_get",
             "Alle Details zu genau einer Person anhand ihrer ID.");
-        param (personGet, "id", "string", true, null, "Personen-ID, z. B. aus person_list");
+        param (personGet, "id", "string", true, null, "positional", "Personen-ID, z. B. aus person_list");
 
         ObjectNode gruppeList = befehl (cmds, "gruppe_list",
             "Gruppen eines Kreisverbands auflisten.");
-        param (gruppeList, "q",    "string", false, null, "Suchtext im Gruppennamen");
-        param (gruppeList, "kvid", "string", false, null, "Kreisverband-ID");
+        param (gruppeList, "q",    "string", false, null, "flag", "Suchtext im Gruppennamen");
+        param (gruppeList, "kvid", "string", false, null, "flag", "Kreisverband-ID");
 
         ObjectNode benutzerList = befehl (cmds, "benutzer_list",
             "Administrative Benutzerkonten eines Kreisverbands auflisten.");
-        param (benutzerList, "kvid", "string", false, null, "Kreisverband-ID");
+        param (benutzerList, "kvid", "string", false, null, "flag", "Kreisverband-ID");
 
         befehl (cmds, "projekt_list",
             "Alle Kreisverbaende (Projekte) auflisten, auf die der Benutzer Zugriff hat.");
@@ -389,13 +389,22 @@ public class CLI {
         return c;
     }
 
+    /** @param uebergabe "positional" (ueber Position im Aufruf, wie person_get.id)
+     *                    oder "flag" (ueber --name <wert>). */
     private static void param (ObjectNode cmd, String name, String typ, boolean pflicht,
-                               String standard, String beschreibung) {
+                               String standard, String uebergabe, String beschreibung) {
         ObjectNode p = ((ObjectNode) cmd.get ("params")).putObject (name);
         p.put ("typ", typ);
         p.put ("pflicht", pflicht);
+        p.put ("uebergabe", uebergabe);
         p.put ("beschreibung", beschreibung);
-        if (standard != null) p.put ("default", standard);
+        if (standard != null) {
+            if ("integer".equals (typ)) {
+                p.put ("default", Integer.parseInt (standard));
+            } else {
+                p.put ("default", standard);
+            }
+        }
     }
 
     private static void printHelp () {
