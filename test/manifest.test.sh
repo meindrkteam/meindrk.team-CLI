@@ -23,15 +23,34 @@ namen = {c["name"] for c in d["commands"]}
 erwartet = {"person_list", "person_get", "gruppe_list", "benutzer_list", "projekt_list"}
 assert namen == erwartet, f"erwartet {erwartet}, bekam {namen}"
 
-# Vollstaendige, benannte Parametermenge je Befehl -- exakte Mengengleichheit,
-# nicht nur Teilmenge. Sonst bliebe ein Manifest mit vertauschten oder
-# falschen Parameternamen gruen.
+# Wahrheit ist CLI.java, nicht der Brief: runPerson (list/get), runGruppe,
+# runBenutzer, runProjekt und ihre arg(args, "--...", ...)/positional(...)-
+# Aufrufe legen fest, welche Parameter es mit welchem typ, welcher pflicht
+# und welcher uebergabe wirklich gibt. Ein Dict statt einer blossen Namens-
+# menge, damit JEDER der fuenf Befehle gleich streng geprueft wird -- keine
+# Sonderfall-Bloecke mehr, die einzelne Befehle laxer pruefen als andere.
 erwartete_params = {
-    "person_list":   {"q", "kvid", "limit"},
-    "person_get":    {"id"},
-    "gruppe_list":   {"q", "kvid"},
-    "benutzer_list": {"kvid"},
-    "projekt_list":  set(),
+    "person_list": {
+        # runPerson, case "list": arg(args,"--q",...), arg(args,"--kvid",...),
+        # Integer.parseInt(arg(args,"--limit","100"))
+        "q":     ("string",  False, "flag"),
+        "kvid":  ("string",  False, "flag"),
+        "limit": ("integer", False, "flag"),
+    },
+    "person_get": {
+        # runPerson, case "get": positional(args, 2), exitWithError wenn null
+        "id": ("string", True, "positional"),
+    },
+    "gruppe_list": {
+        # runGruppe: arg(args,"--kvid",...), arg(args,"--q",...)
+        "q":    ("string", False, "flag"),
+        "kvid": ("string", False, "flag"),
+    },
+    "benutzer_list": {
+        # runBenutzer: arg(args,"--kvid",...)
+        "kvid": ("string", False, "flag"),
+    },
+    "projekt_list": {},  # runProjekt liest keine Args, alles fest verdrahtet
 }
 
 by_name = {c["name"]: c for c in d["commands"]}
@@ -39,7 +58,18 @@ by_name = {c["name"]: c for c in d["commands"]}
 for name, erwartete in erwartete_params.items():
     c = by_name[name]
     gefunden = set(c["params"].keys())
-    assert gefunden == erwartete, f"{name}: erwartet {erwartete}, bekam {gefunden}"
+    erwartete_namen = set(erwartete.keys())
+    assert gefunden == erwartete_namen, f"{name}: erwartet {erwartete_namen}, bekam {gefunden}"
+
+    for pname, (typ, pflicht, uebergabe) in erwartete.items():
+        p = c["params"][pname]
+        gefunden_typ, gefunden_pflicht, gefunden_uebergabe = p["typ"], p["pflicht"], p["uebergabe"]
+        assert gefunden_typ == typ, \
+            f"{name}.{pname}.typ: erwartet {typ!r}, bekam {gefunden_typ!r}"
+        assert gefunden_pflicht == pflicht, \
+            f"{name}.{pname}.pflicht: erwartet {pflicht!r}, bekam {gefunden_pflicht!r}"
+        assert gefunden_uebergabe == uebergabe, \
+            f"{name}.{pname}.uebergabe: erwartet {uebergabe!r}, bekam {gefunden_uebergabe!r}"
 
 for c in d["commands"]:
     assert c["modus"] == "lesen", c            # CLI ist ausschliesslich lesend
@@ -49,30 +79,12 @@ for c in d["commands"]:
         assert isinstance(p["pflicht"], bool), (c["name"], pname, p)
         assert p["uebergabe"] in ("positional", "flag"), (c["name"], pname, p)
 
-# person_get.id wird ueber positional(args, 2) gelesen, nicht ueber ein
-# --id-Flag -- das Manifest muss das ehrlich als "positional" ausweisen,
-# sonst baut ein generischer Aufrufer --id=<wert> und bekommt entweder
-# "Person-ID fehlt." oder (schlimmer) still die falsche Person, weil
-# positional() z.B. den Wert von --kvid als Position 2 mitzaehlt.
-pg = next(c for c in d["commands"] if c["name"] == "person_get")
-assert pg["params"]["id"]["pflicht"] is True, pg
-assert pg["params"]["id"]["uebergabe"] == "positional", pg
-
-pl = next(c for c in d["commands"] if c["name"] == "person_list")
-assert all(p["pflicht"] is False for p in pl["params"].values()), pl
-assert all(p["uebergabe"] == "flag" for p in pl["params"].values()), pl
-assert pl["params"]["limit"]["typ"] == "integer", pl
 # default muss zum typ passen: bei integer eine Zahl, kein String --
 # sonst bricht ein Consumer, der typ zum Casten/strikten Typisieren nutzt.
+pl = by_name["person_list"]
 assert pl["params"]["limit"]["default"] == 100, pl["params"]["limit"]
 assert isinstance(pl["params"]["limit"]["default"], int) and not isinstance(pl["params"]["limit"]["default"], bool), \
     "limit.default muss eine Zahl sein, ist " + str(type(pl["params"]["limit"]["default"]))
-
-gl = next(c for c in d["commands"] if c["name"] == "gruppe_list")
-assert all(p["uebergabe"] == "flag" for p in gl["params"].values()), gl
-
-bl = next(c for c in d["commands"] if c["name"] == "benutzer_list")
-assert all(p["uebergabe"] == "flag" for p in bl["params"].values()), bl
 
 print("OK manifest:", d["cli_version"], sorted(namen))
 ' || { echo "FAIL: Manifest unerwartet"; echo "war: ${out:0:400}"; exit 1; }
