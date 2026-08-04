@@ -132,7 +132,24 @@ public class RestClient {
         if (resp.statusCode () == 401 || resp.statusCode () == 403)
             throw new Exception ("Nicht authentifiziert – bitte mit 'cli login' einloggen.");
         if (resp.statusCode () >= 400)
-            throw new Exception ("Server-Fehler " + resp.statusCode () + ": " + resp.body ());
+            throw new Exception ("Server-Fehler " + resp.statusCode () + kurzerBody (resp.body ()));
+    }
+
+    /** Haengt einen knappen, normalisierten Auszug des Response-Bodys an – nie den
+     *  rohen Body. HTML-Fehlerseiten (Reverse-Proxies, Server-Stacktraces als HTML)
+     *  werden komplett verworfen statt gekuerzt, da ihr Anfang fast immer "<html"
+     *  bzw. "<!doctype" enthaelt und ein Kuerzen allein das nicht zuverlaessig
+     *  entfernen wuerde. Reiner Text wird auf 200 Zeichen gekuerzt. */
+    private static String kurzerBody (String body) {
+        if (body == null) return "";
+        String s = body.strip ();
+        if (s.isEmpty ()) return "";
+        String lower = s.toLowerCase ();
+        if (lower.contains ("<html") || lower.contains ("<!doctype"))
+            return "";
+        s = s.replaceAll ("\\s+", " ");
+        if (s.length () > 200) s = s.substring (0, 200) + "…";
+        return ": " + s;
     }
 
     private static String enc (String s) {

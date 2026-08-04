@@ -48,4 +48,50 @@ case "$err" in
   *)        echo "  ok: ohne --json bleibt Klartext" ;;
 esac
 
+# 4) Server antwortet mit HTTP 500 und langem HTML-Body -> darf nicht 1:1
+#    im JSON landen (weder Laenge noch Markup duerfen durchschlagen).
+cat > /tmp/cli-mockserver.py <<'PY'
+import http.server, sys
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        body = ("<html><head><title>Internal Server Error</title></head><body>"
+                + "Serverfehler " * 100 + "</body></html>").encode("utf-8")
+        self.send_response(500)
+        self.send_header("Content-Type", "text/html")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):
+        pass
+
+if __name__ == "__main__":
+    port = int(sys.argv[1])
+    http.server.HTTPServer(("127.0.0.1", port), Handler).serve_forever()
+PY
+
+MOCKPORT=59998
+python3 /tmp/cli-mockserver.py "$MOCKPORT" &
+MOCKPID=$!
+trap 'kill "$MOCKPID" 2>/dev/null' EXIT
+
+for i in $(seq 1 30); do
+  curl -s -o /dev/null "http://127.0.0.1:$MOCKPORT/" && break
+  sleep 0.1
+done
+
+err="$(run "http://127.0.0.1:$MOCKPORT" --json person list --q Test 2>&1 >/dev/null)"
+kill "$MOCKPID" 2>/dev/null
+wait "$MOCKPID" 2>/dev/null
+echo "$err" | python3 -c '
+import sys, json
+d = json.loads(sys.stdin.read().strip())
+assert d["ok"] is False, d
+err = d["error"]
+assert len(err) < 300, "error zu lang: %d Zeichen" % len(err)
+assert "<html" not in err.lower(), "HTML im error-Feld: " + err[:100]
+print("  ok: Server-500 mit HTML-Body -> gekuerzt, kein HTML:", err[:70])
+' || { echo "  FAIL: Server-Fehler mit HTML-Body nicht sauber gekuerzt"; echo "  war: ${err:0:200}"; fail=1; }
+
 [ "$fail" = "0" ] && echo "OK json-fehlerpfad" || exit 1
