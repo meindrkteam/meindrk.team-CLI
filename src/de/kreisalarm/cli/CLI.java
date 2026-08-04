@@ -2,6 +2,7 @@ package de.kreisalarm.cli;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.Console;
@@ -27,6 +28,9 @@ import java.util.UUID;
 public class CLI {
 
     private static final ObjectMapper MAPPER = new ObjectMapper ();
+
+    /** Muss beim Release mit dem Git-Tag uebereinstimmen. */
+    private static final String CLI_VERSION = "0.1.5";
 
     public static void main (String[] args) throws Exception {
         boolean json = hasFlag (args, "--json");
@@ -73,6 +77,11 @@ public class CLI {
 
         if ("setup".equals (cmd)) {
             runSetup (config, json);
+            return;
+        }
+
+        if ("manifest".equals (cmd)) {
+            runManifest (json);
             return;
         }
 
@@ -332,6 +341,63 @@ public class CLI {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // manifest — Selbstbeschreibung fuer aufrufende Dienste
+    // -------------------------------------------------------------------------
+
+    private static void runManifest (boolean json) {
+        if (!json) {
+            exitWithError ("manifest gibt es nur mit --json.", false);
+            return;
+        }
+
+        ObjectNode root = MAPPER.createObjectNode ();
+        root.put ("cli_version", CLI_VERSION);
+        ArrayNode cmds = root.putArray ("commands");
+
+        ObjectNode personList = befehl (cmds, "person_list",
+            "Personen (Mitglieder) eines Kreisverbands suchen oder auflisten.");
+        param (personList, "q",     "string",  false, null, "Suchtext, meist der Nachname");
+        param (personList, "kvid",  "string",  false, null, "Kreisverband-ID; leer = Standard des Benutzers");
+        param (personList, "limit", "integer", false, "100", "Maximale Trefferzahl");
+
+        ObjectNode personGet = befehl (cmds, "person_get",
+            "Alle Details zu genau einer Person anhand ihrer ID.");
+        param (personGet, "id", "string", true, null, "Personen-ID, z. B. aus person_list");
+
+        ObjectNode gruppeList = befehl (cmds, "gruppe_list",
+            "Gruppen eines Kreisverbands auflisten.");
+        param (gruppeList, "q",    "string", false, null, "Suchtext im Gruppennamen");
+        param (gruppeList, "kvid", "string", false, null, "Kreisverband-ID");
+
+        ObjectNode benutzerList = befehl (cmds, "benutzer_list",
+            "Administrative Benutzerkonten eines Kreisverbands auflisten.");
+        param (benutzerList, "kvid", "string", false, null, "Kreisverband-ID");
+
+        befehl (cmds, "projekt_list",
+            "Alle Kreisverbaende (Projekte) auflisten, auf die der Benutzer Zugriff hat.");
+
+        System.out.println (root.toString ());
+    }
+
+    private static ObjectNode befehl (ArrayNode cmds, String name, String beschreibung) {
+        ObjectNode c = cmds.addObject ();
+        c.put ("name", name);
+        c.put ("beschreibung", beschreibung);
+        c.put ("modus", "lesen");
+        c.putObject ("params");
+        return c;
+    }
+
+    private static void param (ObjectNode cmd, String name, String typ, boolean pflicht,
+                               String standard, String beschreibung) {
+        ObjectNode p = ((ObjectNode) cmd.get ("params")).putObject (name);
+        p.put ("typ", typ);
+        p.put ("pflicht", pflicht);
+        p.put ("beschreibung", beschreibung);
+        if (standard != null) p.put ("default", standard);
+    }
+
     private static void printHelp () {
         System.out.println ("meinDRK CLI");
         System.out.println ();
@@ -344,6 +410,7 @@ public class CLI {
         System.out.println ("  person get <id>                        Person-Details anzeigen");
         System.out.println ("  gruppe  list [--kvid <id>] [--q <text>]  Gruppen auflisten");
         System.out.println ("  benutzer list [--kvid <id>]            Admin-Benutzer auflisten");
+        System.out.println ("  manifest --json                        Befehlskatalog als JSON (fuer aufrufende Dienste)");
         System.out.println ("  help                                   Diese Hilfe");
         System.out.println ();
         System.out.println ("Globale Optionen:");
