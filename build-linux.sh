@@ -11,6 +11,7 @@ SRC_DIR="$SCRIPT_DIR/src"
 LIB_DIR="$SCRIPT_DIR/lib/jackson"
 BUILD_DIR="$SCRIPT_DIR/build"
 TMP_DIR="$SCRIPT_DIR/tmp"
+OUT_NAME="${OUT_NAME:-meindrk-cli-linux-x64}"
 
 mkdir -p "$TMP_DIR/classes" "$TMP_DIR/fat" "$BUILD_DIR"
 
@@ -39,13 +40,13 @@ native-image \
     -O1 \
     --strict-image-heap \
     --initialize-at-build-time=com.fasterxml.jackson.annotation,com.fasterxml.jackson.core,com.fasterxml.jackson.databind \
-    -o "$BUILD_DIR/meindrk-cli-linux-x64"
+    -o "$BUILD_DIR/$OUT_NAME"
 
 echo "[4/5] UPX-Komprimierung (optional)..."
 if command -v upx &>/dev/null; then
-    upx --best "$BUILD_DIR/meindrk-cli-linux-x64" && echo "    OK" || echo "    WARNUNG: UPX fehlgeschlagen - Binary bleibt unkomprimiert."
+    upx --best "$BUILD_DIR/$OUT_NAME" && echo "    OK" || echo "    WARNUNG: UPX fehlgeschlagen - Binary bleibt unkomprimiert."
 else
     echo "    UPX nicht gefunden - uebersprungen. Install: apt install upx-ucl"
 fi
 
-echo "[5/5] Fertig: $BUILD_DIR/meindrk-cli-linux-x64"
+echo "[5/5] Fertig: $BUILD_DIR/$OUT_NAME"

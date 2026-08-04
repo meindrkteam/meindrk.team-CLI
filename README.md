@@ -14,6 +14,7 @@ Vorkompilierte Binaries ohne Installationsvoraussetzungen (kein Java erforderlic
 |-----------|----------|
 | **Windows x64** | [meindrk-cli-windows-x64.exe](https://github.com/meindrkteam/meindrk.team-CLI/releases/latest/download/meindrk-cli-windows-x64.exe) |
 | **Linux x64** | [meindrk-cli-linux-x64](https://github.com/meindrkteam/meindrk.team-CLI/releases/latest/download/meindrk-cli-linux-x64) |
+| **Linux arm64** | [meindrk-cli-linux-arm64](https://github.com/meindrkteam/meindrk.team-CLI/releases/latest/download/meindrk-cli-linux-arm64) |
 | **macOS Apple Silicon (arm64)** | [meindrk-cli-macos-arm64](https://github.com/meindrkteam/meindrk.team-CLI/releases/latest/download/meindrk-cli-macos-arm64) |
 
 > Alle Releases: [github.com/meindrkteam/meindrk.team-CLI/releases](https://github.com/meindrkteam/meindrk.team-CLI/releases)
