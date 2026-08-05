@@ -159,7 +159,12 @@ Diese Optionen können bei jedem Befehl angegeben werden:
 
 | Option | Beschreibung |
 |--------|-------------|
-| `--insecure` | TLS-Zertifikat des Servers nicht prüfen. Nur für lokale Entwicklungs- oder Testserver mit selbstsigniertem Zertifikat verwenden — niemals in der Produktion. |
+| `--insecure` | TLS-Zertifikat des Servers nicht prüfen. Nur für lokale Entwicklungs- oder Testserver mit selbstsigniertem Zertifikat verwenden — niemals in der Produktion. **Muss vor dem Befehl stehen** (`cli --insecure person list`). |
+
+`--insecure` wird bewusst nur im Kopf des Aufrufs gelesen, also vor dem ersten
+Befehlswort. Dahinter stehen die Werte von `--q`, `--kvid` und `--limit`, die bei
+einem Aufruf durch einen Dienst aus einem Sprachmodell stammen; ein Wert wie
+`--q --insecure` darf die Zertifikatsprüfung nicht abschalten können.
 
 ---
 

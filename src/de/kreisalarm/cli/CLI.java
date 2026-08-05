@@ -48,8 +48,10 @@ public class CLI {
             return "Server nicht erreichbar.";
         if (e instanceof java.net.UnknownHostException)
             return "Server-Adresse unbekannt: " + e.getMessage ();
+        // Kein Hinweis auf --insecure: diese Meldung geht bei Dienst-Aufrufen an ein
+        // Sprachmodell, das den Vorschlag beim naechsten Versuch befolgen wuerde.
         if (e instanceof javax.net.ssl.SSLException)
-            return "TLS-Fehler: " + e.getMessage () + " (bei lokalen Servern hilft --insecure)";
+            return "TLS-Fehler: " + e.getMessage ();
         if (e instanceof java.net.http.HttpTimeoutException)
             return "Zeitueberschreitung beim Server.";
         String m = e.getMessage ();
@@ -64,11 +66,13 @@ public class CLI {
 
         String cmd = positional (args, 0);
         if (cmd == null) {
+            if (json) { exitWithError ("Kein Befehl angegeben. Befehlskatalog: --json manifest", true); return; }
             printHelp ();
             return;
         }
 
         if ("help".equals (cmd)) {
+            if (json) { printHinweis ("Befehlskatalog maschinenlesbar abrufen mit: --json manifest"); return; }
             printHelp ();
             return;
         }
@@ -90,7 +94,7 @@ public class CLI {
             return;
         }
 
-        boolean insecure = hasFlag (args, "--insecure");
+        boolean insecure = hasGlobalFlag (args, "--insecure");
         RestClient client = new RestClient (config, insecure);
 
         switch (cmd) {
@@ -234,7 +238,7 @@ public class CLI {
         String sub = sub (args);
         switch (sub) {
             case "list":
-                String kvid  = arg (args, "--kvid",  null);
+                String kvid  = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
                 String query = arg (args, "--q",     null);
                 int limit    = Integer.parseInt (arg (args, "--limit", "100"));
                 JsonNode list = client.getList ("Person", limit, query, kvid);
@@ -244,7 +248,7 @@ public class CLI {
             case "get":
                 String id = positional (args, 2);
                 if (id == null) { exitWithError ("Person-ID fehlt.", json); return; }
-                JsonNode person = client.get ("/backend/rest/Person/" + id);
+                JsonNode person = client.get ("/backend/rest/Person/" + pruefeId (id, "Person-ID"));
                 printResult (person, null, json);
                 break;
             default:
@@ -257,7 +261,7 @@ public class CLI {
     // -------------------------------------------------------------------------
 
     private static void runGruppe (RestClient client, String[] args, boolean json) throws Exception {
-        String kvid  = arg (args, "--kvid", null);
+        String kvid  = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
         String query = arg (args, "--q",    null);
         JsonNode result = client.getList ("Gruppe", 1000, query, kvid);
         printResult (result.path ("root"), new String[]{"id", "projektID", "name"}, json);
@@ -268,7 +272,7 @@ public class CLI {
     // -------------------------------------------------------------------------
 
     private static void runBenutzer (RestClient client, String[] args, boolean json) throws Exception {
-        String kvid = arg (args, "--kvid", null);
+        String kvid = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
         JsonNode result = client.getList ("Benutzer", 1000, null, kvid);
         printResult (result.path ("root"),
             new String[]{"id", "projektID", "login", "vorname", "nachname", "email", "deaktiviert"}, json);
@@ -278,17 +282,55 @@ public class CLI {
     // Hilfsmethoden
     // -------------------------------------------------------------------------
 
+    /** Flags, die einen Wert nachziehen. Der Wert dahinter stammt beim Aufruf
+     *  durch einen Dienst aus einem Sprachmodell und darf deshalb NIE als
+     *  Schalter oder als Positional-Argument gelesen werden – sonst wird aus
+     *  <code>--q --insecure</code> ein globaler Schalter. */
+    static final java.util.Set<String> WERT_FLAGS =
+        java.util.Set.of ("--password", "--token", "--q", "--kvid", "--limit");
+
+    /** true, wenn args[i] der Wert eines vorangehenden Wert-Flags ist. */
+    static boolean istKonsumierterWert (String[] args, int i) {
+        return i > 0 && WERT_FLAGS.contains (args[i - 1]);
+    }
+
     private static String arg (String[] args, String flag, String defaultValue) {
         for (int i = 0; i < args.length - 1; i++) {
+            if (istKonsumierterWert (args, i)) continue;
             if (flag.equals (args[i])) return args[i + 1];
         }
         return defaultValue;
     }
 
+    /** Schalter ohne Wert. Konsumierte Werte zaehlen nie mit. */
     private static boolean hasFlag (String[] args, String flag) {
-        for (String arg : args)
-            if (flag.equals (arg)) return true;
+        for (int i = 0; i < args.length; i++) {
+            if (istKonsumierterWert (args, i)) continue;
+            if (flag.equals (args[i])) return true;
+        }
         return false;
+    }
+
+    /** Sicherheitsrelevanter globaler Schalter: gilt nur im Kopf des Aufrufs,
+     *  also vor dem ersten Positional-Argument (dem Befehl). Damit liegt er
+     *  ausserhalb des Bereichs, in dem die Werte des Aufrufers stehen. */
+    private static boolean hasGlobalFlag (String[] args, String flag) {
+        for (int i = 0; i < args.length; i++) {
+            if (istKonsumierterWert (args, i)) continue;
+            if (!args[i].startsWith ("--")) return false;   // erstes Positional – Ende des Kopfes
+            if (flag.equals (args[i])) return true;
+        }
+        return false;
+    }
+
+    /** IDs stammen bei Dienst-Aufrufen aus einem Sprachmodell und landen in URL-Pfaden
+     *  und Filtern. Nur Ziffern zulassen – damit koennen sie den Pfad nicht verlassen.
+     *  null bleibt null (Parameter nicht gesetzt). */
+    private static String pruefeId (String wert, String bezeichnung) {
+        if (wert == null || wert.isBlank ()) return null;
+        if (!wert.matches ("[0-9]{1,18}"))
+            throw new IllegalArgumentException (bezeichnung + " muss eine Zahl sein.");
+        return wert;
     }
 
     private static String sub (String[] args) {
@@ -296,17 +338,13 @@ public class CLI {
         return s != null ? s : "list";
     }
 
-    private static void requireSub (String[] args, String fallback) {
-        // nothing to enforce – defaults to fallback via sub()
-    }
-
     private static String positional (String[] args, int n) {
         int count = 0;
-        for (String arg : args) {
-            if (!arg.startsWith ("--")) {
-                if (count == n) return arg;
-                count++;
-            }
+        for (int i = 0; i < args.length; i++) {
+            if (istKonsumierterWert (args, i)) continue;
+            if (args[i].startsWith ("--")) continue;
+            if (count == n) return args[i];
+            count++;
         }
         return null;
     }
@@ -318,6 +356,16 @@ public class CLI {
             System.err.println (msg);
         }
         System.exit (1);
+    }
+
+    /** Erfolgs-Envelope ohne Nutzdaten – fuer Faelle, in denen es im JSON-Modus
+     *  nichts abzurufen, aber auch nichts zu melden gibt (z. B. help). */
+    private static void printHinweis (String hinweis) {
+        ObjectNode envelope = MAPPER.createObjectNode ();
+        envelope.put ("ok", true);
+        envelope.putObject ("data").put ("hinweis", hinweis);
+        envelope.put ("count", 1);
+        System.out.println (envelope.toString ());
     }
 
     private static String jsonStr (String s) {
@@ -422,7 +470,7 @@ public class CLI {
         System.out.println ("  manifest --json                        Befehlskatalog als JSON (fuer aufrufende Dienste)");
         System.out.println ("  help                                   Diese Hilfe");
         System.out.println ();
-        System.out.println ("Globale Optionen:");
+        System.out.println ("Globale Optionen (müssen VOR dem Befehl stehen):");
         System.out.println ("  --insecure   TLS-Zertifikat nicht prüfen (für lokale Entwicklungsserver)");
         System.out.println ("  --json       Ausgabe als JSON-Envelope {\"ok\":true,\"data\":...} fuer Agenten/Skripte");
         System.out.println ();

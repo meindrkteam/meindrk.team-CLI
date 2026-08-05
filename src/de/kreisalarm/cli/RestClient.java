@@ -2,6 +2,8 @@ package de.kreisalarm.cli;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -109,8 +111,17 @@ public class RestClient {
         params.put ("limit", String.valueOf (limit));
         if (query != null && !query.isBlank ())
             params.put ("query", query);
-        if (kvid != null && !kvid.isBlank ())
-            params.put ("filter", "[{\"property\":\"projektID\",\"value\":\"" + kvid + "\",\"exact\":true}]");
+        if (kvid != null && !kvid.isBlank ()) {
+            // Mit Jackson bauen statt zusammenkleben: kvid stammt bei Dienst-Aufrufen
+            // aus einem Sprachmodell und koennte sonst eigene Filter-Eigenschaften
+            // in die Abfrage schmuggeln.
+            ArrayNode filter = MAPPER.createArrayNode ();
+            ObjectNode f = filter.addObject ();
+            f.put ("property", "projektID");
+            f.put ("value", kvid);
+            f.put ("exact", true);
+            params.put ("filter", filter.toString ());
+        }
         return get ("/backend/rest/store/" + className + "/view/Extended", params);
     }
 

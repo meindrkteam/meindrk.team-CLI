@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  meinDRK CLI – Linux x64 Build
+#  meinDRK CLI – Linux Build (Architektur = die des Build-Hosts)
 #  Auf einem Linux-System (oder in einem GraalVM-Docker-Container) ausführen.
-#  Ergebnis: build/meindrk-cli-linux-x64
+#  Ergebnis: build/$OUT_NAME  (Vorgabe: meindrk-cli-linux-x64)
 # =============================================================================
 set -euo pipefail
 
@@ -32,7 +32,7 @@ cp -r "$TMP_DIR/classes/." "$TMP_DIR/fat/"
 printf 'Main-Class: de.kreisalarm.cli.CLI\n\n' > "$TMP_DIR/MANIFEST.MF"
 jar cfm "$TMP_DIR/meindrk-cli.jar" "$TMP_DIR/MANIFEST.MF" -C "$TMP_DIR/fat" .
 
-echo "[3/5] Baue Linux x64 Binary..."
+echo "[3/5] Baue Linux-Binary $OUT_NAME..."
 native-image \
     -jar "$TMP_DIR/meindrk-cli.jar" \
     --no-fallback \

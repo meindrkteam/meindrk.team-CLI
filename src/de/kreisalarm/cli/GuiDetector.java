@@ -13,6 +13,16 @@ public class GuiDetector {
             if ("--gui".equals (arg))    return true;
             if ("--no-gui".equals (arg)) return false;
         }
+
+        // Wer Argumente uebergibt, will einen Befehl ausfuehren – nie die GUI.
+        // Die Elternprozess-Heuristik unten erkennt nur den Doppelklick im Finder
+        // bzw. Explorer; sie darf sonst nichts entscheiden. Ohne diese Schranke
+        // startete jeder Aufruf aus einem Nicht-Shell-Elternprozess (etwa ein
+        // Python-Dienst via subprocess) den blockierenden GUI-Server, und der
+        // Aufrufer sah eine leere Ausgabe mit Exit-Code 0 – also einen stillen
+        // Fehlschlag, der wie Erfolg aussieht.
+        if (args.length > 0) return false;
+
         Optional<ProcessHandle> parent = ProcessHandle.current ().parent ();
         if (parent.isEmpty ()) return false;
         Optional<String> cmd = parent.get ().info ().command ();
