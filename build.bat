@@ -69,6 +69,18 @@ set "JAR_CMD=%GRAALVM_BIN%jar.exe"
 :: ===========================================================================
 :: B) MSVC (vcvarsall.bat) finden oder installieren
 :: ===========================================================================
+:: vswhere kennt jede installierte Visual-Studio-Version und ihren Pfad. Die
+:: fest verdrahteten Suchpfade darunter greifen nur noch als Rueckfallebene:
+:: auf den GitHub-Runnern hat sich sowohl die Jahreszahl als auch die Edition
+:: schon geaendert, und dann sah der Build aus wie "gar kein VS installiert".
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if exist "%VSWHERE%" (
+    for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2^>nul`) do (
+        if exist "%%i\VC\Auxiliary\Build\vcvarsall.bat" set "VCVARSALL=%%i\VC\Auxiliary\Build\vcvarsall.bat"
+    )
+)
+if defined VCVARSALL goto :vcvars_found
+
 for %%v in ("BuildTools" "Community" "Professional" "Enterprise") do (
     if exist "d:\Program Files\Microsoft Visual Studio\2022\%%~v\VC\Auxiliary\Build\vcvarsall.bat" (
         set "VCVARSALL=d:\Program Files\Microsoft Visual Studio\2022\%%~v\VC\Auxiliary\Build\vcvarsall.bat"
@@ -92,6 +104,12 @@ echo      Benoetigt fuer GraalVM native-image (MSVC-Linker).
 echo      Installpfad: %VS_INSTALL_PATH%
 echo      Komponenten: VC.Tools.x86.x64 + Windows11SDK.22621
 echo.
+:: Ohne Terminal (CI) liest set /p nichts und der Build brach mit "Abgebrochen"
+:: ab, statt den eigentlichen Grund zu nennen.
+if defined CI (
+    echo FEHLER: Kein Visual Studio gefunden und in der CI ist keine Rueckfrage moeglich.
+    exit /b 1
+)
 set /p "VS_CONFIRM=[VS] Jetzt via winget installieren? (Administratorrechte benoetigt) [j/N]: "
 if /i not "%VS_CONFIRM%"=="j" (
     echo Abgebrochen. Bitte Visual Studio Build Tools manuell installieren.
