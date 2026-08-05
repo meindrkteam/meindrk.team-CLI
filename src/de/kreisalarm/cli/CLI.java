@@ -94,7 +94,7 @@ public class CLI {
             return;
         }
 
-        boolean insecure = hasGlobalFlag (args, "--insecure");
+        boolean insecure = hatGlobalenSchalter (args, "--insecure");
         RestClient client = new RestClient (config, insecure);
 
         switch (cmd) {
@@ -240,7 +240,7 @@ public class CLI {
             case "list":
                 String kvid  = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
                 String query = arg (args, "--q",     null);
-                int limit    = Integer.parseInt (arg (args, "--limit", "100"));
+                int limit    = pruefeZahl (arg (args, "--limit", "100"), "limit");
                 JsonNode list = client.getList ("Person", limit, query, kvid);
                 printResult (list.path ("root"),
                     new String[]{"id", "projektID", "nachname", "vorname", "geburtsdatum", "status", "aktiv"}, json);
@@ -314,7 +314,7 @@ public class CLI {
     /** Sicherheitsrelevanter globaler Schalter: gilt nur im Kopf des Aufrufs,
      *  also vor dem ersten Positional-Argument (dem Befehl). Damit liegt er
      *  ausserhalb des Bereichs, in dem die Werte des Aufrufers stehen. */
-    private static boolean hasGlobalFlag (String[] args, String flag) {
+    static boolean hatGlobalenSchalter (String[] args, String flag) {
         for (int i = 0; i < args.length; i++) {
             if (istKonsumierterWert (args, i)) continue;
             if (!args[i].startsWith ("--")) return false;   // erstes Positional – Ende des Kopfes
@@ -331,6 +331,15 @@ public class CLI {
         if (!wert.matches ("[0-9]{1,18}"))
             throw new IllegalArgumentException (bezeichnung + " muss eine Zahl sein.");
         return wert;
+    }
+
+    /** Wie pruefeId, nur mit Rueckgabe als Zahl. Verhindert, dass die rohe
+     *  NumberFormatException ("For input string: ...") an den Aufrufer geht. */
+    private static int pruefeZahl (String wert, String bezeichnung) {
+        String geprueft = pruefeId (wert, bezeichnung);
+        if (geprueft == null) throw new IllegalArgumentException (bezeichnung + " muss eine Zahl sein.");
+        long n = Long.parseLong (geprueft);          // pruefeId begrenzt auf 18 Ziffern
+        return (int) Math.min (n, 10000);            // deckelt auch absurde Modell-Werte
     }
 
     private static String sub (String[] args) {

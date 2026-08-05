@@ -9,10 +9,11 @@ public class GuiDetector {
     };
 
     public static boolean isGuiLaunch (String[] args) {
-        for (String arg : args) {
-            if ("--gui".equals (arg))    return true;
-            if ("--no-gui".equals (arg)) return false;
-        }
+        // Nur im Kopf des Aufrufs lesen, nie in den Werten dahinter: die stammen
+        // bei Dienst-Aufrufen aus einem Sprachmodell, und ein Suchtext "--gui"
+        // wuerde sonst den blockierenden GUI-Server starten.
+        if (CLI.hatGlobalenSchalter (args, "--gui"))    return true;
+        if (CLI.hatGlobalenSchalter (args, "--no-gui")) return false;
 
         // Wer Argumente uebergibt, will einen Befehl ausfuehren – nie die GUI.
         // Die Elternprozess-Heuristik unten erkennt nur den Doppelklick im Finder

@@ -98,28 +98,49 @@ Python-Prozesses. Der Elternprozess heisst dann 'python3' und nicht 'bash'."""
 import json, os, subprocess, sys
 
 cp, url, home = sys.argv[1], sys.argv[2], sys.argv[3]
+frist = float(os.environ.get("FRIST", "25"))
 env = dict(os.environ, HOME=home, MEINDRK_URL=url, MEINDRK_SESSION="DUMMY", MEINDRK_KVID="1")
 argv = ["java", "-cp", cp, "de.kreisalarm.cli.CLI"] + sys.argv[4:]
 try:
-    p = subprocess.run(argv, capture_output=True, text=True, timeout=25, env=env)
+    p = subprocess.run(argv, capture_output=True, text=True, timeout=frist, env=env)
 except subprocess.TimeoutExpired:
     print("TIMEOUT: CLI kehrte nicht zurueck (GUI-Server blockiert?)"); sys.exit(3)
-if not p.stdout.strip():
-    print("LEER: exit=%d, stdout leer, stderr=%r" % (p.returncode, p.stderr[:200])); sys.exit(4)
+# Envelope steht bei Erfolg auf stdout, bei Fehlern auf stderr – beides zaehlt.
+roh = p.stdout.strip() or p.stderr.strip()
+if not roh:
+    print("LEER: exit=%d, keine Ausgabe" % p.returncode); sys.exit(4)
 try:
-    d = json.loads(p.stdout)
+    d = json.loads(roh)
 except ValueError:
-    print("KEIN JSON: %r" % p.stdout[:200]); sys.exit(5)
-print("OK %s" % json.dumps(d)[:80])
+    print("KEIN JSON: %r" % roh[:200]); sys.exit(5)
+print("OK %s" % json.dumps(d, ensure_ascii=False)[:80])
 PY
 
-for befehl in "--json person list --q Test" "--json manifest"; do
+for befehl in "--json person list --q Test" "--json manifest" "--json person list --q --gui" "--json gruppe list --kvid --gui"; do
   out="$(python3 "$WORK/elternprozess.py" "$CP" "http://127.0.0.1:$HTTP_PORT" "$FAKEHOME" $befehl 2>&1)"
   case "$out" in
     OK\ *) echo "  ok: '$befehl' aus Python-Elternprozess -> ${out#OK }" ;;
     *)     melde "'$befehl' aus Python-Elternprozess: $out" ;;
   esac
 done
+
+# Gegenprobe: --gui im Kopf des Aufrufs startet die GUI weiterhin (blockiert).
+out="$(FRIST=8 python3 "$WORK/elternprozess.py" "$CP" "http://127.0.0.1:$HTTP_PORT" "$FAKEHOME" --gui person list 2>&1)"
+case "$out" in
+  TIMEOUT*) echo "  ok: --gui vor dem Befehl startet weiterhin die GUI" ;;
+  *)        melde "--gui vor dem Befehl startet die GUI nicht mehr: $out" ;;
+esac
+
+# --limit aus einem Modell: saubere Meldung statt roher NumberFormatException
+err="$(run "http://127.0.0.1:$HTTP_PORT" --json person list --limit abc 2>&1 >/dev/null)"
+echo "$err" | python3 -c '
+import sys, json
+d = json.loads(sys.stdin.read().strip())
+assert d["ok"] is False, d
+assert "For input string" not in d["error"], "rohe Java-Meldung: " + d["error"]
+assert "Zahl" in d["error"], d
+print("  ok: ungueltiges --limit ->", d["error"])
+' || { melde "--limit liefert eine rohe Java-Meldung"; echo "  war: ${err:0:200}"; }
 
 # ---------------------------------------------------------------------------
 # C2 – --insecure als WERT eines Flags darf TLS nicht abschalten.
