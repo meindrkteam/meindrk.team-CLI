@@ -102,26 +102,42 @@ public class RestClient {
 
         HttpResponse<String> resp = http.send (req, HttpResponse.BodyHandlers.ofString ());
         requireOk (resp);
-        return MAPPER.readTree (resp.body ());
+        JsonNode body = MAPPER.readTree (resp.body ());
+        requireErfolg (body);
+        return body;
     }
 
-    public JsonNode getList (String className, int limit, String query, String kvid) throws Exception {
+    /**
+     *  Sucht in einem Store. <b>Der Store kennt keinen Parameter {@code query}</b> –
+     *  er beantwortet ihn mit {@code success:false}. Gesucht wird ueber {@code filter}.
+     *
+     *  @param queryProperty Eigenschaft, in der {@code query} gesucht wird
+     *                       (Person: nachname, Gruppe: name). Null = keine Suche.
+     */
+    public JsonNode getList (String className, int limit, String query, String queryProperty,
+                             String kvid) throws Exception {
         Map<String, String> params = new LinkedHashMap<> ();
         params.put ("start", "0");
         params.put ("limit", String.valueOf (limit));
-        if (query != null && !query.isBlank ())
-            params.put ("query", query);
+
+        // Mit Jackson bauen statt zusammenkleben: query und kvid stammen bei
+        // Dienst-Aufrufen aus einem Sprachmodell und koennten sonst eigene
+        // Filter-Eigenschaften in die Abfrage schmuggeln.
+        ArrayNode filter = MAPPER.createArrayNode ();
+        if (query != null && !query.isBlank () && queryProperty != null) {
+            ObjectNode f = filter.addObject ();
+            f.put ("property", queryProperty);
+            f.put ("value", query);          // ohne exact -> Teiltreffer
+        }
         if (kvid != null && !kvid.isBlank ()) {
-            // Mit Jackson bauen statt zusammenkleben: kvid stammt bei Dienst-Aufrufen
-            // aus einem Sprachmodell und koennte sonst eigene Filter-Eigenschaften
-            // in die Abfrage schmuggeln.
-            ArrayNode filter = MAPPER.createArrayNode ();
             ObjectNode f = filter.addObject ();
             f.put ("property", "projektID");
             f.put ("value", kvid);
             f.put ("exact", true);
-            params.put ("filter", filter.toString ());
         }
+        if (!filter.isEmpty ())
+            params.put ("filter", filter.toString ());
+
         return get ("/backend/rest/store/" + className + "/view/Extended", params);
     }
 
@@ -137,6 +153,19 @@ public class RestClient {
             }
         }
         return sb.toString ();
+    }
+
+    /** Der Server antwortet auch auf abgelehnte Abfragen mit HTTP 200 und meldet den
+     *  Fehler erst im Envelope ({@code success:false}). Ohne diese Pruefung wuerde
+     *  eine fehlgeschlagene Abfrage als leeres Ergebnis durchgehen – ein aufrufendes
+     *  Sprachmodell antwortet darauf ueberzeugt "nichts gefunden". */
+    private static void requireErfolg (JsonNode body) throws Exception {
+        if (body == null || !body.isObject () || !body.has ("success")) return;
+        if (body.path ("success").asBoolean (true)) return;
+        JsonNode fehler = body.get ("error");
+        String text = (fehler == null || fehler.isNull ()) ? "" : fehler.asText ();
+        throw new Exception ("Der Server hat die Abfrage abgelehnt"
+            + (text.isBlank () ? "." : " (Fehler " + text + ")."));
     }
 
     private void requireOk (HttpResponse<String> resp) throws Exception {

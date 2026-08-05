@@ -30,7 +30,7 @@ public class CLI {
     private static final ObjectMapper MAPPER = new ObjectMapper ();
 
     /** Muss beim Release mit dem Git-Tag uebereinstimmen. */
-    private static final String CLI_VERSION = "0.1.5";
+    private static final String CLI_VERSION = "0.1.6";
 
     public static void main (String[] args) throws Exception {
         boolean json = hasFlag (args, "--json");
@@ -226,7 +226,7 @@ public class CLI {
     // -------------------------------------------------------------------------
 
     private static void runProjekt (RestClient client, String[] args, boolean json) throws Exception {
-        JsonNode result = client.getList ("Projekt", 1000, null, null);
+        JsonNode result = client.getList ("Projekt", 1000, null, null, null);
         printResult (result.path ("root"), new String[]{"id", "name", "organisation", "prefix"}, json);
     }
 
@@ -241,7 +241,7 @@ public class CLI {
                 String kvid  = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
                 String query = arg (args, "--q",     null);
                 int limit    = pruefeZahl (arg (args, "--limit", "100"), "limit");
-                JsonNode list = client.getList ("Person", limit, query, kvid);
+                JsonNode list = client.getList ("Person", limit, query, "nachname", kvid);
                 printResult (list.path ("root"),
                     new String[]{"id", "projektID", "nachname", "vorname", "geburtsdatum", "status", "aktiv"}, json);
                 break;
@@ -263,7 +263,7 @@ public class CLI {
     private static void runGruppe (RestClient client, String[] args, boolean json) throws Exception {
         String kvid  = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
         String query = arg (args, "--q",    null);
-        JsonNode result = client.getList ("Gruppe", 1000, query, kvid);
+        JsonNode result = client.getList ("Gruppe", 1000, query, "name", kvid);
         printResult (result.path ("root"), new String[]{"id", "projektID", "name"}, json);
     }
 
@@ -273,7 +273,7 @@ public class CLI {
 
     private static void runBenutzer (RestClient client, String[] args, boolean json) throws Exception {
         String kvid = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
-        JsonNode result = client.getList ("Benutzer", 1000, null, kvid);
+        JsonNode result = client.getList ("Benutzer", 1000, null, null, kvid);
         printResult (result.path ("root"),
             new String[]{"id", "projektID", "login", "vorname", "nachname", "email", "deaktiviert"}, json);
     }
@@ -384,10 +384,14 @@ public class CLI {
 
     private static void printResult (JsonNode data, String[] columns, boolean json) {
         if (json) {
+            // Fehlt der Datenknoten, ist das ein leeres Ergebnis – nicht eines mit
+            // einem Treffer. count=1 bei data=null hat einen Aufrufer schon einmal
+            // glauben lassen, die Abfrage sei erfolgreich gewesen.
+            boolean leer = data == null || data.isMissingNode () || data.isNull ();
             ObjectNode envelope = MAPPER.createObjectNode ();
             envelope.put ("ok", true);
-            envelope.set ("data", data);
-            envelope.put ("count", data.isArray () ? data.size () : 1);
+            if (leer) envelope.putNull ("data"); else envelope.set ("data", data);
+            envelope.put ("count", leer ? 0 : (data.isArray () ? data.size () : 1));
             System.out.println (envelope.toString ());
         } else {
             if (columns != null) {
@@ -414,7 +418,7 @@ public class CLI {
 
         ObjectNode personList = befehl (cmds, "person_list",
             "Personen (Mitglieder) eines Kreisverbands suchen oder auflisten.");
-        param (personList, "q",     "string",  false, null,  "flag", "Suchtext, meist der Nachname");
+        param (personList, "q",     "string",  false, null,  "flag", "Suchtext im Nachnamen (Teiltreffer)");
         param (personList, "kvid",  "string",  false, null,  "flag", "Kreisverband-ID; leer = Standard des Benutzers");
         param (personList, "limit", "integer", false, "100", "flag", "Maximale Trefferzahl");
 
@@ -424,7 +428,7 @@ public class CLI {
 
         ObjectNode gruppeList = befehl (cmds, "gruppe_list",
             "Gruppen eines Kreisverbands auflisten.");
-        param (gruppeList, "q",    "string", false, null, "flag", "Suchtext im Gruppennamen");
+        param (gruppeList, "q",    "string", false, null, "flag", "Suchtext im Gruppennamen (Teiltreffer)");
         param (gruppeList, "kvid", "string", false, null, "flag", "Kreisverband-ID");
 
         ObjectNode benutzerList = befehl (cmds, "benutzer_list",
