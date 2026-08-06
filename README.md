@@ -19,6 +19,13 @@ Vorkompilierte Binaries ohne Installationsvoraussetzungen (kein Java erforderlic
 
 > Alle Releases: [github.com/meindrkteam/meindrk.team-CLI/releases](https://github.com/meindrkteam/meindrk.team-CLI/releases)
 
+Zu jeder Linux-/Windows-Datei gibt es zusätzlich eine Variante mit dem Suffix
+`-upx`: rund ein Drittel der Größe, dafür **rund 90 ms längere Startzeit je
+Aufruf**, weil UPX das Image bei jedem Start entpackt (gemessen 90,9 ms gegen
+2,0 ms). Für den interaktiven Gebrauch ist das egal, für Dienste, die die CLI je
+Abfrage als Unterprozess starten, nicht — dort die Variante **ohne** Suffix
+nehmen.
+
 **Linux/macOS nach dem Download ausführbar machen:**
 ```bash
 chmod +x meindrk-cli-linux-x64

@@ -178,11 +178,18 @@ if errorlevel 1 ( echo FEHLER beim Windows-Build. & exit /b 1 )
 echo     OK
 
 echo.
-echo [3b/4] UPX-Komprimierung (optional)...
+echo [3b/4] Zusaetzlich eine UPX-komprimierte Variante...
+:: Das Standard-Binary bleibt UNKOMPRIMIERT: UPX entpackt bei JEDEM Start das
+:: ganze Image in den Speicher (gemessen 90,9 ms gegen 2,0 ms Startzeit). Wer
+:: den kleinen Download braucht, nimmt die -upx-Variante.
 where upx >nul 2>&1
 if not errorlevel 1 (
-    upx --best "%BUILD_DIR%\meindrk-cli-windows-x64.exe"
-    if errorlevel 1 ( echo     WARNUNG: UPX fehlgeschlagen - Binary bleibt unkomprimiert. ) else ( echo     OK )
+    copy /Y "%BUILD_DIR%\meindrk-cli-windows-x64.exe" "%BUILD_DIR%\meindrk-cli-windows-x64-upx.exe" >nul
+    upx --best "%BUILD_DIR%\meindrk-cli-windows-x64-upx.exe"
+    if errorlevel 1 (
+        echo     WARNUNG: UPX fehlgeschlagen - Variante entfaellt.
+        del "%BUILD_DIR%\meindrk-cli-windows-x64-upx.exe" 2>nul
+    ) else ( echo     OK: meindrk-cli-windows-x64-upx.exe )
 ) else (
     echo     UPX nicht gefunden - uebersprungen. Install: winget install upx
 )

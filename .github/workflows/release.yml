@@ -28,7 +28,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: meindrk-cli-windows-x64
-          path: build/meindrk-cli-windows-x64.exe
+          path: |
+            build/meindrk-cli-windows-x64.exe
+            build/meindrk-cli-windows-x64-upx.exe
+          if-no-files-found: warn
 
   build-linux:
     name: Linux x64
@@ -52,7 +55,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: meindrk-cli-linux-x64
-          path: build/meindrk-cli-linux-x64
+          path: |
+            build/meindrk-cli-linux-x64
+            build/meindrk-cli-linux-x64-upx
+          if-no-files-found: warn
 
   build-linux-arm64:
     name: Linux arm64
@@ -78,7 +84,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: meindrk-cli-linux-arm64
-          path: build/meindrk-cli-linux-arm64
+          path: |
+            build/meindrk-cli-linux-arm64
+            build/meindrk-cli-linux-arm64-upx
+          if-no-files-found: warn
 
   build-macos-arm64:
     name: macOS arm64
@@ -135,7 +144,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/meindrk-cli-windows-x64/meindrk-cli-windows-x64.exe
-            artifacts/meindrk-cli-linux-x64/meindrk-cli-linux-x64
-            artifacts/meindrk-cli-linux-arm64/meindrk-cli-linux-arm64
-            artifacts/meindrk-cli-macos-arm64/meindrk-cli-macos-arm64
+            artifacts/meindrk-cli-windows-x64/*
+            artifacts/meindrk-cli-linux-x64/*
+            artifacts/meindrk-cli-linux-arm64/*
+            artifacts/meindrk-cli-macos-arm64/*

@@ -42,11 +42,18 @@ native-image \
     --initialize-at-build-time=com.fasterxml.jackson.annotation,com.fasterxml.jackson.core,com.fasterxml.jackson.databind \
     -o "$BUILD_DIR/$OUT_NAME"
 
-echo "[4/5] UPX-Komprimierung (optional)..."
+echo "[4/5] Zusaetzlich eine UPX-komprimierte Variante..."
+# Das Standard-Binary bleibt UNKOMPRIMIERT. UPX entpackt bei JEDEM Start das
+# ganze Image in den Speicher: gemessen 90,9 ms Startzeit gepackt gegen 2,0 ms
+# entpackt. Fuer einen Dienst, der die CLI je Abfrage als Unterprozess startet,
+# sind das 89 ms pro Aufruf — die Platzersparnis (40 -> 12 MB) lohnt das nicht.
+# Wer den kleinen Download braucht, nimmt die -upx-Variante.
 if command -v upx &>/dev/null; then
-    upx --best "$BUILD_DIR/$OUT_NAME" && echo "    OK" || echo "    WARNUNG: UPX fehlgeschlagen - Binary bleibt unkomprimiert."
+    cp "$BUILD_DIR/$OUT_NAME" "$BUILD_DIR/$OUT_NAME-upx"
+    upx --best "$BUILD_DIR/$OUT_NAME-upx" && echo "    OK: $OUT_NAME-upx" \
+        || { echo "    WARNUNG: UPX fehlgeschlagen - Variante entfaellt."; rm -f "$BUILD_DIR/$OUT_NAME-upx"; }
 else
     echo "    UPX nicht gefunden - uebersprungen. Install: apt install upx-ucl"
 fi
 
-echo "[5/5] Fertig: $BUILD_DIR/$OUT_NAME"
+echo "[5/5] Fertig: $BUILD_DIR/$OUT_NAME (Start ~2 ms)"
