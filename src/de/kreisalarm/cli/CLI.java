@@ -113,6 +113,9 @@ public class CLI {
             case "benutzer":
                 runBenutzer (client, args, json);
                 break;
+            case "kalender":
+                runKalender (client, args, json);
+                break;
             default:
                 exitWithError ("Unbekannter Befehl: " + cmd, json);
         }
@@ -279,6 +282,16 @@ public class CLI {
     }
 
     // -------------------------------------------------------------------------
+    // kalender
+    // -------------------------------------------------------------------------
+
+    private static void runKalender (RestClient client, String[] args, boolean json) throws Exception {
+        String kvid = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
+        JsonNode result = client.getList ("Calendar", 1000, null, null, kvid);
+        printResult (result.path ("root"), new String[]{"id", "projektID", "name"}, json);
+    }
+
+    // -------------------------------------------------------------------------
     // Hilfsmethoden
     // -------------------------------------------------------------------------
 
@@ -435,6 +448,10 @@ public class CLI {
             "Administrative Benutzerkonten eines Kreisverbands auflisten.");
         param (benutzerList, "kvid", "string", false, null, "flag", "Kreisverband-ID");
 
+        ObjectNode kalenderList = befehl (cmds, "kalender_list",
+            "Kalender eines Kreisverbands auflisten (liefert die calendarID fuer termin_create).");
+        param (kalenderList, "kvid", "string", false, null, "flag", "Kreisverband-ID");
+
         befehl (cmds, "projekt_list",
             "Alle Kreisverbaende (Projekte) auflisten, auf die der Benutzer Zugriff hat.");
 
@@ -480,6 +497,7 @@ public class CLI {
         System.out.println ("  person get <id>                        Person-Details anzeigen");
         System.out.println ("  gruppe  list [--kvid <id>] [--q <text>]  Gruppen auflisten");
         System.out.println ("  benutzer list [--kvid <id>]            Admin-Benutzer auflisten");
+        System.out.println ("  kalender list [--kvid <id>]            Kalender auflisten (liefert calendarID)");
         System.out.println ("  manifest --json                        Befehlskatalog als JSON (fuer aufrufende Dienste)");
         System.out.println ("  help                                   Diese Hilfe");
         System.out.println ();

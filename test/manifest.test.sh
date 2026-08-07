@@ -22,7 +22,7 @@ d = json.load(sys.stdin)
 assert re.fullmatch(r"\d+\.\d+\.\d+", d["cli_version"]), d.get("cli_version")
 
 namen = {c["name"] for c in d["commands"]}
-erwartet = {"person_list", "person_get", "gruppe_list", "benutzer_list", "projekt_list"}
+erwartet = {"person_list", "person_get", "gruppe_list", "benutzer_list", "kalender_list", "projekt_list"}
 assert namen == erwartet, f"erwartet {erwartet}, bekam {namen}"
 
 # Wahrheit ist CLI.java, nicht der Brief: runPerson (list/get), runGruppe,
@@ -50,6 +50,10 @@ erwartete_params = {
     },
     "benutzer_list": {
         # runBenutzer: arg(args,"--kvid",...)
+        "kvid": ("string", False, "flag"),
+    },
+    "kalender_list": {
+        # runKalender: arg(args,"--kvid",...)
         "kvid": ("string", False, "flag"),
     },
     "projekt_list": {},  # runProjekt liest keine Args, alles fest verdrahtet
