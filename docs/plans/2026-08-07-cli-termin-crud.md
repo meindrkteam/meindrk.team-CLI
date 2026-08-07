@@ -34,6 +34,20 @@ chmod +x /c/Users/joern/bin/python3
 
 (`/c/Users/joern/bin` steht bereits vorn in `$PATH`.) Ohne diesen Shim schlagen alle `test/*.test.sh` mit "Python was not found" fehl — das ist ein Umgebungsproblem dieses Rechners, kein Fehler der Skripte.
 
+**Classpath-Trenner/Pfade:** Natives `java.exe`/`javac.exe` unter Windows versteht weder `:` als Classpath-Trenner noch rohe `/tmp/...`-Pfade. Dafür existiert bereits `test/lib/portable.sh` (Commit `build(test): test/*.test.sh nativ unter Windows (Git Bash) lauffaehig machen`) mit `CP_SEP` (`;` unter Windows/Git Bash, sonst `:`) und `winpath()` (löst einen POSIX-Pfad über `pwd -W` in einen von `java`/`javac` nutzbaren Pfad auf; auf Linux/macOS ein No-op). **Jedes neue Testskript in diesem Plan muss das nutzen** — direkt nach `cd "$(dirname "$0")/.."` einfügen:
+
+```bash
+source test/lib/portable.sh
+```
+
+und die Classpath-Variable so bauen (statt `CP="$CLASSES:lib/jackson/*"`):
+
+```bash
+CP="$(winpath "$CLASSES")${CP_SEP}$(winpath "$PWD")/lib/jackson/*"
+```
+
+Alle sechs Testskript-Vorlagen weiter unten in diesem Plan sind bereits in dieser portablen Form geschrieben — beim Anlegen exakt so übernehmen, nicht auf das alte `"$CLASSES:lib/jackson/*"`-Muster zurückfallen.
+
 ---
 
 ### Task 1: RestClient — post/put/delete
@@ -58,6 +72,7 @@ Erstelle `test/restclient-schreiben.test.sh`:
 #   3. HTTP >=400 wird als Exception erkannt (requireOk), auch fuer post/put/delete.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+source test/lib/portable.sh
 
 CLASSES=/tmp/cliclasses-schreiben
 rm -rf "$CLASSES" && mkdir -p "$CLASSES"
@@ -68,7 +83,7 @@ WORK=/tmp/cli-schreiben
 rm -rf "$WORK" && mkdir -p "$WORK/j"
 LOG="$WORK/requests.log"
 : > "$LOG"
-CP="$CLASSES:lib/jackson/*"
+CP="$(winpath "$CLASSES")${CP_SEP}$(winpath "$PWD")/lib/jackson/*"
 
 cat > "$WORK/j/SchreibProbe.java" <<'JAVA'
 import de.kreisalarm.cli.Config;
@@ -163,7 +178,7 @@ FAKEHOME=/tmp/cli-schreiben-home
 rm -rf "$FAKEHOME" && mkdir -p "$FAKEHOME"
 lauf () {  # modus pfad
   HOME="$FAKEHOME" MEINDRK_URL="http://127.0.0.1:$PORT" MEINDRK_SESSION=DUMMY \
-    java -cp "$CP:$WORK/j" SchreibProbe "$1" "$2"
+    java -cp "${CP}${CP_SEP}$(winpath "$WORK/j")" SchreibProbe "$1" "$2"
 }
 
 # ── 1) POST: Methode, Content-Type, Body kommen korrekt an ──────────────────
@@ -315,11 +330,13 @@ Erstelle `test/kalender.test.sh`:
 # Prueft: kalender list filtert ueber projektID und zeigt id/projektID/name.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+source test/lib/portable.sh
 
 CLASSES=/tmp/cliclasses-kalender
 rm -rf "$CLASSES" && mkdir -p "$CLASSES"
 javac --release 21 -cp "lib/jackson/*" -d "$CLASSES" src/de/kreisalarm/cli/*.java || {
   echo "FAIL: kompiliert nicht"; exit 1; }
+CP="$(winpath "$CLASSES")${CP_SEP}$(winpath "$PWD")/lib/jackson/*"
 
 FAKEHOME=/tmp/cli-kalender-home
 rm -rf "$FAKEHOME" && mkdir -p "$FAKEHOME"
@@ -355,7 +372,7 @@ for i in $(seq 1 40); do curl -sf "http://127.0.0.1:$PORT/ping" >/dev/null 2>&1 
 
 run () {
   HOME="$FAKEHOME" MEINDRK_URL="http://127.0.0.1:$PORT" MEINDRK_SESSION=DUMMY \
-    java -cp "$CLASSES:lib/jackson/*" de.kreisalarm.cli.CLI "$@"
+    java -cp "$CP" de.kreisalarm.cli.CLI "$@"
 }
 
 fail=0
@@ -488,11 +505,13 @@ Erstelle `test/termin-lesen.test.sh`:
 # den Namen; termin get liefert ein Einzelobjekt.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+source test/lib/portable.sh
 
 CLASSES=/tmp/cliclasses-termin-lesen
 rm -rf "$CLASSES" && mkdir -p "$CLASSES"
 javac --release 21 -cp "lib/jackson/*" -d "$CLASSES" src/de/kreisalarm/cli/*.java || {
   echo "FAIL: kompiliert nicht"; exit 1; }
+CP="$(winpath "$CLASSES")${CP_SEP}$(winpath "$PWD")/lib/jackson/*"
 
 FAKEHOME=/tmp/cli-termin-lesen-home
 rm -rf "$FAKEHOME" && mkdir -p "$FAKEHOME"
@@ -532,7 +551,7 @@ for i in $(seq 1 40); do curl -sf "http://127.0.0.1:$PORT/ping" >/dev/null 2>&1 
 
 run () {
   HOME="$FAKEHOME" MEINDRK_URL="http://127.0.0.1:$PORT" MEINDRK_SESSION=DUMMY \
-    java -cp "$CLASSES:lib/jackson/*" de.kreisalarm.cli.CLI "$@"
+    java -cp "$CP" de.kreisalarm.cli.CLI "$@"
 }
 
 fail=0
@@ -639,6 +658,22 @@ JsonNode result = client.getList ("Benutzer", 1000, null, null, "projektID", kvi
 // runKalender (aus Task 2)
 JsonNode result = client.getList ("Calendar", 1000, null, null, "projektID", kvid);
 ```
+
+Zusätzlich `FilterProbe.java` in `test/sicherheit.test.sh` (Prüfung I4b, direkter `RestClient.getList`-Aufruf) auf die neue Signatur anpassen:
+
+```java
+public class FilterProbe {
+    public static void main (String[] a) throws Exception {
+        new RestClient (new Config ()).getList ("Person", 5, null, null, "projektID", a[0]);
+    }
+}
+```
+
+```bash
+bash test/sicherheit.test.sh
+```
+
+Erwartet weiterhin: `OK sicherheit`.
 
 - [ ] **Step 5: `termin list` + `termin get` implementieren**
 
@@ -786,11 +821,13 @@ Erstelle `test/termin-schreiben.test.sh`:
 # korrekter POST-Body.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+source test/lib/portable.sh
 
 CLASSES=/tmp/cliclasses-termin-schreiben
 rm -rf "$CLASSES" && mkdir -p "$CLASSES"
 javac --release 21 -cp "lib/jackson/*" -d "$CLASSES" src/de/kreisalarm/cli/*.java || {
   echo "FAIL: kompiliert nicht"; exit 1; }
+CP="$(winpath "$CLASSES")${CP_SEP}$(winpath "$PWD")/lib/jackson/*"
 
 FAKEHOME=/tmp/cli-termin-schreiben-home
 rm -rf "$FAKEHOME" && mkdir -p "$FAKEHOME"
@@ -828,7 +865,7 @@ for i in $(seq 1 40); do curl -sf "http://127.0.0.1:$PORT/ping" >/dev/null 2>&1 
 
 run () {
   HOME="$FAKEHOME" MEINDRK_URL="http://127.0.0.1:$PORT" MEINDRK_SESSION=DUMMY \
-    java -cp "$CLASSES:lib/jackson/*" de.kreisalarm.cli.CLI "$@"
+    java -cp "$CP" de.kreisalarm.cli.CLI "$@"
 }
 
 fail=0
@@ -1161,11 +1198,13 @@ Erstelle `test/termin-update.test.sh`:
 # wird korrekt ausgepackt.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+source test/lib/portable.sh
 
 CLASSES=/tmp/cliclasses-termin-update
 rm -rf "$CLASSES" && mkdir -p "$CLASSES"
 javac --release 21 -cp "lib/jackson/*" -d "$CLASSES" src/de/kreisalarm/cli/*.java || {
   echo "FAIL: kompiliert nicht"; exit 1; }
+CP="$(winpath "$CLASSES")${CP_SEP}$(winpath "$PWD")/lib/jackson/*"
 
 FAKEHOME=/tmp/cli-termin-update-home
 rm -rf "$FAKEHOME" && mkdir -p "$FAKEHOME"
@@ -1203,7 +1242,7 @@ for i in $(seq 1 40); do curl -sf "http://127.0.0.1:$PORT/ping" >/dev/null 2>&1 
 
 run () {
   HOME="$FAKEHOME" MEINDRK_URL="http://127.0.0.1:$PORT" MEINDRK_SESSION=DUMMY \
-    java -cp "$CLASSES:lib/jackson/*" de.kreisalarm.cli.CLI "$@"
+    java -cp "$CP" de.kreisalarm.cli.CLI "$@"
 }
 
 fail=0
@@ -1340,11 +1379,13 @@ Erstelle `test/termin-delete.test.sh`:
 # ID, success:false (z. B. RESTRICT-Abhaengigkeit) wird als Fehler gemeldet.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+source test/lib/portable.sh
 
 CLASSES=/tmp/cliclasses-termin-delete
 rm -rf "$CLASSES" && mkdir -p "$CLASSES"
 javac --release 21 -cp "lib/jackson/*" -d "$CLASSES" src/de/kreisalarm/cli/*.java || {
   echo "FAIL: kompiliert nicht"; exit 1; }
+CP="$(winpath "$CLASSES")${CP_SEP}$(winpath "$PWD")/lib/jackson/*"
 
 FAKEHOME=/tmp/cli-termin-delete-home
 rm -rf "$FAKEHOME" && mkdir -p "$FAKEHOME"
@@ -1379,7 +1420,7 @@ for i in $(seq 1 40); do curl -sf "http://127.0.0.1:$PORT/ping" >/dev/null 2>&1 
 
 run () {
   HOME="$FAKEHOME" MEINDRK_URL="http://127.0.0.1:$PORT" MEINDRK_SESSION=DUMMY \
-    java -cp "$CLASSES:lib/jackson/*" de.kreisalarm.cli.CLI "$@"
+    java -cp "$CP" de.kreisalarm.cli.CLI "$@"
 }
 
 fail=0
