@@ -310,6 +310,9 @@ public class CLI {
             case "create":
                 runTerminCreate (client, args, json);
                 break;
+            case "update":
+                runTerminUpdate (client, args, json);
+                break;
             default:
                 exitWithError ("Unbekannter Subbefehl: " + sub, json);
         }
@@ -372,6 +375,15 @@ public class CLI {
         ObjectNode body = terminBody (args);
         JsonNode result = client.post ("/backend/rest/CalendarEvent", body);
         printResult (result, null, json);
+    }
+
+    private static void runTerminUpdate (RestClient client, String[] args, boolean json) throws Exception {
+        String id = positional (args, 2);
+        if (id == null) { exitWithError ("Termin-ID fehlt.", json); return; }
+        String terminId = pruefeId (id, "Termin-ID");
+        ObjectNode body = terminBody (args);
+        JsonNode result = client.put ("/backend/rest/CalendarEvent/" + terminId, body);
+        printResult (result.path ("root").path (0), null, json);
     }
 
     // -------------------------------------------------------------------------
@@ -594,6 +606,24 @@ public class CLI {
         param (terminCreate, "gpsNearbyRequired",       "string", false, "false", "flag", "true|false");
         param (terminCreate, "countAsService",          "string", false, "false", "flag", "true|false");
 
+        ObjectNode terminUpdate = befehl (cmds, "termin_update",
+            "Vorhandenen Termin aendern. Nur angegebene Felder werden geaendert.", "schreiben");
+        param (terminUpdate, "id",                      "string", true,  null,    "positional", "Termin-ID, z. B. aus termin_list");
+        param (terminUpdate, "calendar",                "string", false, null,    "flag", "Kalender-ID (aus kalender_list)");
+        param (terminUpdate, "name",                    "string", false, null,    "flag", "Titel des Termins");
+        param (terminUpdate, "start",                   "string", false, null,    "flag", "Startdatum, Format yyyyMMdd");
+        param (terminUpdate, "end",                      "string", false, null,    "flag", "Enddatum, Format yyyyMMdd");
+        param (terminUpdate, "startTime",                "string", false, null,    "flag", "Startzeit, Format hhmm");
+        param (terminUpdate, "endTime",                  "string", false, null,    "flag", "Endzeit, Format hhmm");
+        param (terminUpdate, "description",              "string", false, null,    "flag", "Beschreibungstext");
+        param (terminUpdate, "type",                     "string", false, null,    "flag", "Freitext-Kategorie");
+        param (terminUpdate, "ort",                      "string", false, null,    "flag", "DpVeranstaltungOrt-ID");
+        param (terminUpdate, "tags",                     "string", false, null,    "flag", "Kommagetrennte Tags");
+        param (terminUpdate, "feedback",                 "string", false, null,    "flag", "NONE|ALL|INVITED");
+        param (terminUpdate, "allowFreeRegistration",    "string", false, null,    "flag", "true|false");
+        param (terminUpdate, "gpsNearbyRequired",        "string", false, null,    "flag", "true|false");
+        param (terminUpdate, "countAsService",           "string", false, null,    "flag", "true|false");
+
         System.out.println (root.toString ());
     }
 
@@ -646,6 +676,8 @@ public class CLI {
         System.out.println ("                 [--feedback NONE|ALL|INVITED] [--allowFreeRegistration true|false]");
         System.out.println ("                 [--gpsNearbyRequired true|false] [--countAsService true|false]");
         System.out.println ("                                         Neuen Termin anlegen");
+        System.out.println ("  termin  update <id> [gleiche Flags wie create, alle optional]");
+        System.out.println ("                                         Termin aendern (nur gesetzte Felder)");
         System.out.println ("  manifest --json                        Befehlskatalog als JSON (fuer aufrufende Dienste)");
         System.out.println ("  help                                   Diese Hilfe");
         System.out.println ();

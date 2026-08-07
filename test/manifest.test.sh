@@ -23,7 +23,7 @@ assert re.fullmatch(r"\d+\.\d+\.\d+", d["cli_version"]), d.get("cli_version")
 
 namen = {c["name"] for c in d["commands"]}
 erwartet = {"person_list", "person_get", "gruppe_list", "benutzer_list", "kalender_list", "projekt_list",
-            "termin_list", "termin_get", "termin_create"}
+            "termin_list", "termin_get", "termin_create", "termin_update"}
 assert namen == erwartet, f"erwartet {erwartet}, bekam {namen}"
 
 # Wahrheit ist CLI.java, nicht der Brief: runPerson (list/get), runGruppe,
@@ -86,6 +86,24 @@ erwartete_params = {
         "gpsNearbyRequired":     ("string", False, "flag"),
         "countAsService":        ("string", False, "flag"),
     },
+    "termin_update": {
+        # runTerminUpdate: id ist positional, alle anderen kommen aus arg(args, "--...", ...)
+        "id":                    ("string", True,  "positional"),
+        "calendar":              ("string", False, "flag"),
+        "name":                  ("string", False, "flag"),
+        "start":                 ("string", False, "flag"),
+        "end":                   ("string", False, "flag"),
+        "startTime":             ("string", False, "flag"),
+        "endTime":               ("string", False, "flag"),
+        "description":           ("string", False, "flag"),
+        "type":                  ("string", False, "flag"),
+        "ort":                   ("string", False, "flag"),
+        "tags":                  ("string", False, "flag"),
+        "feedback":              ("string", False, "flag"),
+        "allowFreeRegistration": ("string", False, "flag"),
+        "gpsNearbyRequired":     ("string", False, "flag"),
+        "countAsService":        ("string", False, "flag"),
+    },
 }
 
 by_name = {c["name"]: c for c in d["commands"]}
@@ -110,6 +128,7 @@ erwartete_modi = {
     "person_list": "lesen", "person_get": "lesen", "gruppe_list": "lesen",
     "benutzer_list": "lesen", "projekt_list": "lesen", "kalender_list": "lesen",
     "termin_list": "lesen", "termin_get": "lesen", "termin_create": "schreiben",
+    "termin_update": "schreiben",
 }
 for c in d["commands"]:
     assert c["modus"] == erwartete_modi[c["name"]], c
