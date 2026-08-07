@@ -112,7 +112,7 @@ FAKEHOME=/tmp/cli-schreiben-home
 rm -rf "$FAKEHOME" && mkdir -p "$FAKEHOME"
 lauf () {  # modus pfad
   HOME="$FAKEHOME" MEINDRK_URL="http://127.0.0.1:$PORT" MEINDRK_SESSION=DUMMY \
-    java -cp "${CP}${CP_SEP}$(winpath "$WORK/j")" SchreibProbe "$1" "$2"
+    MSYS_NO_PATHCONV=1 java -cp "${CP}${CP_SEP}$(winpath "$WORK/j")" SchreibProbe "$1" "$2"
 }
 
 # ── 1) POST: Methode, Content-Type, Body kommen korrekt an ──────────────────
