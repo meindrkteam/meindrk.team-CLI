@@ -23,7 +23,7 @@ assert re.fullmatch(r"\d+\.\d+\.\d+", d["cli_version"]), d.get("cli_version")
 
 namen = {c["name"] for c in d["commands"]}
 erwartet = {"person_list", "person_get", "gruppe_list", "benutzer_list", "kalender_list", "projekt_list",
-            "termin_list", "termin_get", "termin_create", "termin_update"}
+            "termin_list", "termin_get", "termin_create", "termin_update", "termin_delete"}
 assert namen == erwartet, f"erwartet {erwartet}, bekam {namen}"
 
 # Wahrheit ist CLI.java, nicht der Brief: runPerson (list/get), runGruppe,
@@ -104,6 +104,10 @@ erwartete_params = {
         "gpsNearbyRequired":     ("string", False, "flag"),
         "countAsService":        ("string", False, "flag"),
     },
+    "termin_delete": {
+        "id":  ("string", True, "positional"),
+        "yes": ("boolean", True, "schalter"),
+    },
 }
 
 by_name = {c["name"]: c for c in d["commands"]}
@@ -128,15 +132,15 @@ erwartete_modi = {
     "person_list": "lesen", "person_get": "lesen", "gruppe_list": "lesen",
     "benutzer_list": "lesen", "projekt_list": "lesen", "kalender_list": "lesen",
     "termin_list": "lesen", "termin_get": "lesen", "termin_create": "schreiben",
-    "termin_update": "schreiben",
+    "termin_update": "schreiben", "termin_delete": "schreiben",
 }
 for c in d["commands"]:
     assert c["modus"] == erwartete_modi[c["name"]], c
     assert c["beschreibung"].strip(), c
     for pname, p in c["params"].items():
-        assert p["typ"] in ("string", "integer"), (c["name"], pname, p)
+        assert p["typ"] in ("string", "integer", "boolean"), (c["name"], pname, p)
         assert isinstance(p["pflicht"], bool), (c["name"], pname, p)
-        assert p["uebergabe"] in ("positional", "flag"), (c["name"], pname, p)
+        assert p["uebergabe"] in ("positional", "flag", "schalter"), (c["name"], pname, p)
 
 # default muss zum typ passen: bei integer eine Zahl, kein String --
 # sonst bricht ein Consumer, der typ zum Casten/strikten Typisieren nutzt.

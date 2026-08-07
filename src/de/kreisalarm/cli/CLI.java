@@ -313,6 +313,9 @@ public class CLI {
             case "update":
                 runTerminUpdate (client, args, json);
                 break;
+            case "delete":
+                runTerminDelete (client, args, json);
+                break;
             default:
                 exitWithError ("Unbekannter Subbefehl: " + sub, json);
         }
@@ -384,6 +387,23 @@ public class CLI {
         ObjectNode body = terminBody (args);
         JsonNode result = client.put ("/backend/rest/CalendarEvent/" + terminId, body);
         printResult (result.path ("root").path (0), null, json);
+    }
+
+    private static void runTerminDelete (RestClient client, String[] args, boolean json) throws Exception {
+        String id = positional (args, 2);
+        if (id == null) { exitWithError ("Termin-ID fehlt.", json); return; }
+        String terminId = pruefeId (id, "Termin-ID");
+        boolean yes = hasFlag (args, "--yes");
+        if (!yes) {
+            if (json) { exitWithError ("--yes erforderlich zum Loeschen im JSON-Modus.", json); return; }
+            Console console = System.console ();
+            if (console == null) { exitWithError ("Kein Terminal - bitte --yes angeben.", json); return; }
+            String antwort = console.readLine ("Termin %s wirklich loeschen? [j/N] ", terminId).trim ();
+            if (!"j".equalsIgnoreCase (antwort)) { System.out.println ("Abgebrochen."); return; }
+        }
+        client.delete ("/backend/rest/CalendarEvent/" + terminId);
+        if (json) printHinweis ("Termin " + terminId + " geloescht.");
+        else System.out.println ("Termin " + terminId + " geloescht.");
     }
 
     // -------------------------------------------------------------------------
@@ -624,6 +644,11 @@ public class CLI {
         param (terminUpdate, "gpsNearbyRequired",        "string", false, null,    "flag", "true|false");
         param (terminUpdate, "countAsService",           "string", false, null,    "flag", "true|false");
 
+        ObjectNode terminDelete = befehl (cmds, "termin_delete",
+            "Termin unwiderruflich loeschen.", "schreiben");
+        param (terminDelete, "id", "string", true, null, "positional", "Termin-ID, z. B. aus termin_list");
+        paramSchalter (terminDelete, "yes", true, "Bestaetigung ohne Nachfrage; im JSON-Modus erforderlich");
+
         System.out.println (root.toString ());
     }
 
@@ -654,6 +679,15 @@ public class CLI {
         }
     }
 
+    /** Schalter-Parameter ohne Wert, z. B. --yes. typ ist immer "boolean". */
+    private static void paramSchalter (ObjectNode cmd, String name, boolean pflicht, String beschreibung) {
+        ObjectNode p = ((ObjectNode) cmd.get ("params")).putObject (name);
+        p.put ("typ", "boolean");
+        p.put ("pflicht", pflicht);
+        p.put ("uebergabe", "schalter");
+        p.put ("beschreibung", beschreibung);
+    }
+
     private static void printHelp () {
         System.out.println ("meinDRK CLI");
         System.out.println ();
@@ -678,6 +712,7 @@ public class CLI {
         System.out.println ("                                         Neuen Termin anlegen");
         System.out.println ("  termin  update <id> [gleiche Flags wie create, alle optional]");
         System.out.println ("                                         Termin aendern (nur gesetzte Felder)");
+        System.out.println ("  termin  delete <id> [--yes]            Termin loeschen (--yes noetig ohne Terminal/im --json-Modus)");
         System.out.println ("  manifest --json                        Befehlskatalog als JSON (fuer aufrufende Dienste)");
         System.out.println ("  help                                   Diese Hilfe");
         System.out.println ();
