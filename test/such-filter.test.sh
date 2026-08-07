@@ -5,11 +5,13 @@
 #   3. Fehlendes "root" ergibt count=0, nicht count=1 mit data=null.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+source test/lib/portable.sh
 
 CLASSES=/tmp/cliclasses-such
 rm -rf "$CLASSES" && mkdir -p "$CLASSES"
 javac --release 21 -cp "lib/jackson/*" -d "$CLASSES" src/de/kreisalarm/cli/*.java || {
   echo "FAIL: kompiliert nicht"; exit 1; }
+CP="$(winpath "$CLASSES")${CP_SEP}$(winpath "$PWD")/lib/jackson/*"
 
 FAKEHOME=/tmp/cli-fakehome-such
 rm -rf "$FAKEHOME" && mkdir -p "$FAKEHOME"
@@ -57,7 +59,7 @@ done
 run () {  # Argumente der CLI
   HOME="$FAKEHOME" MEINDRK_URL="http://127.0.0.1:$PORT" \
     MEINDRK_SESSION=DUMMY MEINDRK_KVID=1 \
-    java -cp "$CLASSES:lib/jackson/*" de.kreisalarm.cli.CLI "$@"
+    java -cp "$CP" de.kreisalarm.cli.CLI "$@"
 }
 
 fail=0

@@ -2,11 +2,13 @@
 # Prueft: mit --json endet JEDER Fehler als JSON-Envelope, nie als Stacktrace.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+source test/lib/portable.sh
 
 CLASSES=/tmp/cliclasses-test
 rm -rf "$CLASSES" && mkdir -p "$CLASSES"
 javac --release 21 -cp "lib/jackson/*" -d "$CLASSES" src/de/kreisalarm/cli/*.java || {
   echo "FAIL: kompiliert nicht"; exit 1; }
+CP="$(winpath "$CLASSES")${CP_SEP}$(winpath "$PWD")/lib/jackson/*"
 
 FAKEHOME=/tmp/cli-fakehome
 rm -rf "$FAKEHOME" && mkdir -p "$FAKEHOME"
@@ -14,7 +16,7 @@ rm -rf "$FAKEHOME" && mkdir -p "$FAKEHOME"
 run () {  # $1 = MEINDRK_URL, Rest = Argumente
   local url="$1"; shift
   HOME="$FAKEHOME" MEINDRK_URL="$url" MEINDRK_SESSION=DUMMY MEINDRK_KVID=1 \
-    java -cp "$CLASSES:lib/jackson/*" de.kreisalarm.cli.CLI "$@"
+    java -cp "$CP" de.kreisalarm.cli.CLI "$@"
 }
 
 fail=0

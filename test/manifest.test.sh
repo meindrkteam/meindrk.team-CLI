@@ -2,6 +2,7 @@
 # Prueft: manifest --json beschreibt genau die Befehle, die es wirklich gibt.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+source test/lib/portable.sh
 
 CLASSES=/tmp/cliclasses-test
 rm -rf "$CLASSES" && mkdir -p "$CLASSES"
@@ -11,7 +12,8 @@ javac --release 21 -cp "lib/jackson/*" -d "$CLASSES" src/de/kreisalarm/cli/*.jav
 FAKEHOME=/tmp/cli-fakehome
 rm -rf "$FAKEHOME" && mkdir -p "$FAKEHOME"
 
-out="$(HOME="$FAKEHOME" java -cp "$CLASSES:lib/jackson/*" de.kreisalarm.cli.CLI manifest --json)"
+CP="$(winpath "$CLASSES")${CP_SEP}$(winpath "$PWD")/lib/jackson/*"
+out="$(HOME="$FAKEHOME" java -cp "$CP" de.kreisalarm.cli.CLI manifest --json)"
 
 echo "$out" | python3 -c '
 import sys, json, re

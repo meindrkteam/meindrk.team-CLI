@@ -7,6 +7,7 @@
 #   I5  --json liefert auch bei help / fehlendem Befehl einen Envelope
 set -uo pipefail
 cd "$(dirname "$0")/.."
+source test/lib/portable.sh
 
 CLASSES=/tmp/cliclasses-sicherheit
 rm -rf "$CLASSES" && mkdir -p "$CLASSES"
@@ -23,7 +24,7 @@ LOG="$WORK/requests.log"
 
 HTTP_PORT=59900
 HTTPS_PORT=59901
-CP="$CLASSES:lib/jackson/*"
+CP="$(winpath "$CLASSES")${CP_SEP}$(winpath "$PWD")/lib/jackson/*"
 
 run () {  # $1 = URL, Rest = Argumente
   local url="$1"; shift
@@ -69,7 +70,7 @@ if __name__ == "__main__":
 PY
 
 openssl req -x509 -newkey rsa:2048 -nodes -days 2 \
-  -subj "/CN=127.0.0.1" -addext "subjectAltName=IP:127.0.0.1" \
+  -subj "$(msys_subj "/CN=127.0.0.1")" -addext "subjectAltName=IP:127.0.0.1" \
   -keyout "$WORK/key.pem" -out "$WORK/cert.pem" >/dev/null 2>&1 || {
   echo "FAIL: openssl fehlt – Selbstsigniertes Zertifikat nicht erzeugbar"; exit 1; }
 cat "$WORK/key.pem" "$WORK/cert.pem" > "$WORK/server.pem"
@@ -206,7 +207,7 @@ import de.kreisalarm.cli.RestClient;
 
 public class FilterProbe {
     public static void main (String[] a) throws Exception {
-        new RestClient (new Config ()).getList ("Person", 5, null, a[0]);
+        new RestClient (new Config ()).getList ("Person", 5, null, null, a[0]);
     }
 }
 JAVA
@@ -214,7 +215,7 @@ javac -cp "$CP" -d "$WORK/j" "$WORK/j/FilterProbe.java" 2>/dev/null || {
   melde "FilterProbe kompiliert nicht"; }
 : > "$LOG"
 HOME="$FAKEHOME" MEINDRK_URL="http://127.0.0.1:$HTTP_PORT" MEINDRK_SESSION=DUMMY \
-  java -cp "$CP:$WORK/j" FilterProbe '1","exact":false,"passwort":"x' >/dev/null 2>&1
+  java -cp "${CP}${CP_SEP}$(winpath "$WORK/j")" FilterProbe '1","exact":false,"passwort":"x' >/dev/null 2>&1
 python3 - "$LOG" <<'PY' || melde "RestClient klebt den Filter zusammen statt ihn zu kodieren"
 import json, sys, urllib.parse
 zeilen = [z.strip() for z in open(sys.argv[1], encoding="utf-8") if z.strip()]
