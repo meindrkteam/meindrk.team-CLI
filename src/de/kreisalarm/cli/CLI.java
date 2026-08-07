@@ -307,6 +307,9 @@ public class CLI {
             case "get":
                 runTerminGet (client, args, json);
                 break;
+            case "create":
+                runTerminCreate (client, args, json);
+                break;
             default:
                 exitWithError ("Unbekannter Subbefehl: " + sub, json);
         }
@@ -328,6 +331,49 @@ public class CLI {
         printResult (termin, null, json);
     }
 
+    private static ObjectNode terminBody (String[] args) throws Exception {
+        ObjectNode body = MAPPER.createObjectNode ();
+        String calendar = pruefeId (arg (args, "--calendar", null), "calendar");
+        if (calendar != null) body.put ("calendarID", Long.parseLong (calendar));
+        String name = arg (args, "--name", null);
+        if (name != null) body.put ("name", name);
+        String start = pruefeDatum (arg (args, "--start", null), "start");
+        if (start != null) body.put ("startDate", start);
+        String end = pruefeDatum (arg (args, "--end", null), "end");
+        if (end != null) body.put ("endDate", end);
+        String startTime = pruefeZeit (arg (args, "--startTime", null), "startTime");
+        if (startTime != null) body.put ("startTime", startTime);
+        String endTime = pruefeZeit (arg (args, "--endTime", null), "endTime");
+        if (endTime != null) body.put ("endTime", endTime);
+        String description = arg (args, "--description", null);
+        if (description != null) body.put ("description", description);
+        String type = arg (args, "--type", null);
+        if (type != null) body.put ("type", type);
+        String ort = pruefeId (arg (args, "--ort", null), "ort");
+        if (ort != null) body.put ("dpVeranstaltungOrtID", Long.parseLong (ort));
+        String tags = arg (args, "--tags", null);
+        if (tags != null) body.put ("tags", tags);
+        String feedback = pruefeEnum (arg (args, "--feedback", null), "feedback", "NONE", "ALL", "INVITED");
+        if (feedback != null) body.put ("feedbackPolicy", feedback);
+        String allowFree = arg (args, "--allowFreeRegistration", null);
+        if (allowFree != null) body.put ("allowFreeRegistration", pruefeBool (allowFree, "allowFreeRegistration"));
+        String gpsNearby = arg (args, "--gpsNearbyRequired", null);
+        if (gpsNearby != null) body.put ("gpsNearbyRequired", pruefeBool (gpsNearby, "gpsNearbyRequired"));
+        String countAsService = arg (args, "--countAsService", null);
+        if (countAsService != null) body.put ("countAsService", pruefeBool (countAsService, "countAsService"));
+        return body;
+    }
+
+    private static void runTerminCreate (RestClient client, String[] args, boolean json) throws Exception {
+        if (arg (args, "--calendar", null) == null) { exitWithError ("--calendar erforderlich.", json); return; }
+        if (arg (args, "--name", null) == null)     { exitWithError ("--name erforderlich.", json); return; }
+        if (arg (args, "--start", null) == null)    { exitWithError ("--start erforderlich.", json); return; }
+        if (arg (args, "--end", null) == null)      { exitWithError ("--end erforderlich.", json); return; }
+        ObjectNode body = terminBody (args);
+        JsonNode result = client.post ("/backend/rest/CalendarEvent", body);
+        printResult (result, null, json);
+    }
+
     // -------------------------------------------------------------------------
     // Hilfsmethoden
     // -------------------------------------------------------------------------
@@ -337,7 +383,10 @@ public class CLI {
      *  Schalter oder als Positional-Argument gelesen werden – sonst wird aus
      *  <code>--q --insecure</code> ein globaler Schalter. */
     static final java.util.Set<String> WERT_FLAGS =
-        java.util.Set.of ("--password", "--token", "--q", "--kvid", "--limit", "--calendar");
+        java.util.Set.of ("--password", "--token", "--q", "--kvid", "--limit", "--calendar",
+            "--name", "--start", "--end", "--startTime", "--endTime", "--description", "--type",
+            "--ort", "--tags", "--feedback", "--allowFreeRegistration", "--gpsNearbyRequired",
+            "--countAsService");
 
     /** true, wenn args[i] der Wert eines vorangehenden Wert-Flags ist. */
     static boolean istKonsumierterWert (String[] args, int i) {
@@ -390,6 +439,32 @@ public class CLI {
         if (geprueft == null) throw new IllegalArgumentException (bezeichnung + " muss eine Zahl sein.");
         long n = Long.parseLong (geprueft);          // pruefeId begrenzt auf 18 Ziffern
         return (int) Math.min (n, 10000);            // deckelt auch absurde Modell-Werte
+    }
+
+    private static String pruefeDatum (String wert, String bezeichnung) {
+        if (wert == null) return null;
+        if (!wert.matches ("[0-9]{8}"))
+            throw new IllegalArgumentException (bezeichnung + " muss das Format yyyyMMdd haben.");
+        return wert;
+    }
+
+    private static String pruefeZeit (String wert, String bezeichnung) {
+        if (wert == null) return null;
+        if (!wert.matches ("[0-9]{4}"))
+            throw new IllegalArgumentException (bezeichnung + " muss das Format hhmm haben.");
+        return wert;
+    }
+
+    private static String pruefeEnum (String wert, String bezeichnung, String... erlaubt) {
+        if (wert == null) return null;
+        for (String e : erlaubt) if (e.equals (wert)) return wert;
+        throw new IllegalArgumentException (bezeichnung + " muss einer von " + String.join ("|", erlaubt) + " sein.");
+    }
+
+    private static boolean pruefeBool (String wert, String bezeichnung) {
+        if ("true".equals (wert)) return true;
+        if ("false".equals (wert)) return false;
+        throw new IllegalArgumentException (bezeichnung + " muss true oder false sein.");
     }
 
     private static String sub (String[] args) {
@@ -467,49 +542,66 @@ public class CLI {
         ArrayNode cmds = root.putArray ("commands");
 
         ObjectNode personList = befehl (cmds, "person_list",
-            "Personen (Mitglieder) eines Kreisverbands suchen oder auflisten.");
+            "Personen (Mitglieder) eines Kreisverbands suchen oder auflisten.", "lesen");
         param (personList, "q",     "string",  false, null,  "flag", "Suchtext im Nachnamen (Teiltreffer)");
         param (personList, "kvid",  "string",  false, null,  "flag", "Kreisverband-ID; leer = Standard des Benutzers");
         param (personList, "limit", "integer", false, "100", "flag", "Maximale Trefferzahl");
 
         ObjectNode personGet = befehl (cmds, "person_get",
-            "Alle Details zu genau einer Person anhand ihrer ID.");
+            "Alle Details zu genau einer Person anhand ihrer ID.", "lesen");
         param (personGet, "id", "string", true, null, "positional", "Personen-ID, z. B. aus person_list");
 
         ObjectNode gruppeList = befehl (cmds, "gruppe_list",
-            "Gruppen eines Kreisverbands auflisten.");
+            "Gruppen eines Kreisverbands auflisten.", "lesen");
         param (gruppeList, "q",    "string", false, null, "flag", "Suchtext im Gruppennamen (Teiltreffer)");
         param (gruppeList, "kvid", "string", false, null, "flag", "Kreisverband-ID");
 
         ObjectNode benutzerList = befehl (cmds, "benutzer_list",
-            "Administrative Benutzerkonten eines Kreisverbands auflisten.");
+            "Administrative Benutzerkonten eines Kreisverbands auflisten.", "lesen");
         param (benutzerList, "kvid", "string", false, null, "flag", "Kreisverband-ID");
 
         ObjectNode kalenderList = befehl (cmds, "kalender_list",
-            "Kalender eines Kreisverbands auflisten (liefert die calendarID fuer termin_create).");
+            "Kalender eines Kreisverbands auflisten (liefert die calendarID fuer termin_create).", "lesen");
         param (kalenderList, "kvid", "string", false, null, "flag", "Kreisverband-ID");
 
         befehl (cmds, "projekt_list",
-            "Alle Kreisverbaende (Projekte) auflisten, auf die der Benutzer Zugriff hat.");
+            "Alle Kreisverbaende (Projekte) auflisten, auf die der Benutzer Zugriff hat.", "lesen");
 
         ObjectNode terminList = befehl (cmds, "termin_list",
-            "Termine (Kalendereintraege) eines Kalenders auflisten oder durchsuchen.");
+            "Termine (Kalendereintraege) eines Kalenders auflisten oder durchsuchen.", "lesen");
         param (terminList, "calendar", "string", false, null, "flag", "Kalender-ID (aus kalender_list)");
         param (terminList, "q",        "string", false, null, "flag", "Suchtext im Titel (Teiltreffer)");
         param (terminList, "limit",    "integer", false, "100", "flag", "Maximale Trefferzahl");
 
         ObjectNode terminGet = befehl (cmds, "termin_get",
-            "Alle Details zu genau einem Termin anhand seiner ID.");
+            "Alle Details zu genau einem Termin anhand seiner ID.", "lesen");
         param (terminGet, "id", "string", true, null, "positional", "Termin-ID, z. B. aus termin_list");
+
+        ObjectNode terminCreate = befehl (cmds, "termin_create",
+            "Neuen Termin (Kalendereintrag) anlegen.", "schreiben");
+        param (terminCreate, "calendar",               "string", true,  null,    "flag", "Kalender-ID (aus kalender_list)");
+        param (terminCreate, "name",                   "string", true,  null,    "flag", "Titel des Termins");
+        param (terminCreate, "start",                  "string", true,  null,    "flag", "Startdatum, Format yyyyMMdd");
+        param (terminCreate, "end",                     "string", true,  null,    "flag", "Enddatum, Format yyyyMMdd");
+        param (terminCreate, "startTime",               "string", false, null,    "flag", "Startzeit, Format hhmm");
+        param (terminCreate, "endTime",                 "string", false, null,    "flag", "Endzeit, Format hhmm");
+        param (terminCreate, "description",             "string", false, null,    "flag", "Beschreibungstext");
+        param (terminCreate, "type",                    "string", false, null,    "flag", "Freitext-Kategorie");
+        param (terminCreate, "ort",                     "string", false, null,    "flag", "DpVeranstaltungOrt-ID");
+        param (terminCreate, "tags",                    "string", false, null,    "flag", "Kommagetrennte Tags");
+        param (terminCreate, "feedback",                "string", false, "INVITED", "flag", "NONE|ALL|INVITED");
+        param (terminCreate, "allowFreeRegistration",   "string", false, "false", "flag", "true|false");
+        param (terminCreate, "gpsNearbyRequired",       "string", false, "false", "flag", "true|false");
+        param (terminCreate, "countAsService",          "string", false, "false", "flag", "true|false");
 
         System.out.println (root.toString ());
     }
 
-    private static ObjectNode befehl (ArrayNode cmds, String name, String beschreibung) {
+    private static ObjectNode befehl (ArrayNode cmds, String name, String beschreibung, String modus) {
         ObjectNode c = cmds.addObject ();
         c.put ("name", name);
         c.put ("beschreibung", beschreibung);
-        c.put ("modus", "lesen");
+        c.put ("modus", modus);
         c.putObject ("params");
         return c;
     }
@@ -548,6 +640,12 @@ public class CLI {
         System.out.println ("  termin  list [--calendar <id>] [--q <text>] [--limit <n>]");
         System.out.println ("                                         Termine auflisten");
         System.out.println ("  termin  get <id>                       Termin-Details anzeigen");
+        System.out.println ("  termin  create --calendar <id> --name <text> --start <yyyyMMdd> --end <yyyyMMdd>");
+        System.out.println ("                 [--startTime hhmm] [--endTime hhmm] [--description <text>]");
+        System.out.println ("                 [--type <text>] [--ort <id>] [--tags <text>]");
+        System.out.println ("                 [--feedback NONE|ALL|INVITED] [--allowFreeRegistration true|false]");
+        System.out.println ("                 [--gpsNearbyRequired true|false] [--countAsService true|false]");
+        System.out.println ("                                         Neuen Termin anlegen");
         System.out.println ("  manifest --json                        Befehlskatalog als JSON (fuer aufrufende Dienste)");
         System.out.println ("  help                                   Diese Hilfe");
         System.out.println ();

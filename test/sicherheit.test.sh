@@ -156,6 +156,20 @@ assert "--insecure" not in d["error"], "Fehlertext schlaegt --insecure vor: " + 
 print("  ok: --q --insecure schaltet TLS nicht ab ->", d["error"][:60])
 ' || { melde "--insecure als Flag-Wert hat die TLS-Pruefung abgeschaltet"; echo "  war: ${err:0:200}"; }
 
+# C2b - dasselbe Muster fuer ein neues Wert-Flag aus der Termin-Erweiterung.
+# --name traegt (anders als --calendar) keine Formatpruefung vor dem Request,
+# damit dieser Aufruf tatsaechlich bis zum TLS-Handshake kommt und die
+# Gegenprobe nicht schon vorher an einer harmlosen Validierungsmeldung scheitert.
+err="$(run "https://127.0.0.1:$HTTPS_PORT" --json termin create --calendar 7 --start 20260901 --end 20260901 --name --insecure 2>&1 >/dev/null)"
+echo "$err" | python3 -c '
+import sys, json
+d = json.loads (sys.stdin.read ().strip ())
+assert d["ok"] is False, d
+assert "TLS" in d["error"] or "SSL" in d["error"].upper (), d
+assert "--insecure" not in d["error"], "Fehlertext schlaegt --insecure vor: " + d["error"]
+print ("  ok: --name --insecure schaltet TLS nicht ab ->", d["error"][:60])
+' || { melde "--insecure als Wert von --name hat die TLS-Pruefung abgeschaltet"; echo "  war: ${err:0:200}"; }
+
 # Gegenprobe: an der vorgesehenen Stelle (vor dem Befehl) wirkt --insecure weiter.
 out="$(run "https://127.0.0.1:$HTTPS_PORT" --insecure --json person list --q Test 2>/dev/null)"
 echo "$out" | python3 -c '

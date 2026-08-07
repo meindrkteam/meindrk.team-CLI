@@ -23,7 +23,7 @@ assert re.fullmatch(r"\d+\.\d+\.\d+", d["cli_version"]), d.get("cli_version")
 
 namen = {c["name"] for c in d["commands"]}
 erwartet = {"person_list", "person_get", "gruppe_list", "benutzer_list", "kalender_list", "projekt_list",
-            "termin_list", "termin_get"}
+            "termin_list", "termin_get", "termin_create"}
 assert namen == erwartet, f"erwartet {erwartet}, bekam {namen}"
 
 # Wahrheit ist CLI.java, nicht der Brief: runPerson (list/get), runGruppe,
@@ -69,6 +69,23 @@ erwartete_params = {
         # runTerminGet: positional(args, 2), exitWithError wenn null
         "id": ("string", True, "positional"),
     },
+    "termin_create": {
+        # runTerminCreate/terminBody: alle Werte kommen aus arg(args, "--...", ...)
+        "calendar":              ("string", True,  "flag"),
+        "name":                  ("string", True,  "flag"),
+        "start":                 ("string", True,  "flag"),
+        "end":                   ("string", True,  "flag"),
+        "startTime":             ("string", False, "flag"),
+        "endTime":               ("string", False, "flag"),
+        "description":           ("string", False, "flag"),
+        "type":                  ("string", False, "flag"),
+        "ort":                   ("string", False, "flag"),
+        "tags":                  ("string", False, "flag"),
+        "feedback":              ("string", False, "flag"),
+        "allowFreeRegistration": ("string", False, "flag"),
+        "gpsNearbyRequired":     ("string", False, "flag"),
+        "countAsService":        ("string", False, "flag"),
+    },
 }
 
 by_name = {c["name"]: c for c in d["commands"]}
@@ -89,8 +106,13 @@ for name, erwartete in erwartete_params.items():
         assert gefunden_uebergabe == uebergabe, \
             f"{name}.{pname}.uebergabe: erwartet {uebergabe!r}, bekam {gefunden_uebergabe!r}"
 
+erwartete_modi = {
+    "person_list": "lesen", "person_get": "lesen", "gruppe_list": "lesen",
+    "benutzer_list": "lesen", "projekt_list": "lesen", "kalender_list": "lesen",
+    "termin_list": "lesen", "termin_get": "lesen", "termin_create": "schreiben",
+}
 for c in d["commands"]:
-    assert c["modus"] == "lesen", c            # CLI ist ausschliesslich lesend
+    assert c["modus"] == erwartete_modi[c["name"]], c
     assert c["beschreibung"].strip(), c
     for pname, p in c["params"].items():
         assert p["typ"] in ("string", "integer"), (c["name"], pname, p)
