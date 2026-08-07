@@ -107,6 +107,45 @@ public class RestClient {
         return body;
     }
 
+    public JsonNode post (String path, ObjectNode body) throws Exception {
+        HttpRequest req = HttpRequest.newBuilder ()
+            .uri (URI.create (config.getUrl () + path))
+            .header ("Cookie", "JSESSIONID=" + config.getSession ())
+            .header ("Content-Type", "application/json")
+            .POST (HttpRequest.BodyPublishers.ofString (body.toString (), StandardCharsets.UTF_8))
+            .build ();
+        HttpResponse<String> resp = http.send (req, HttpResponse.BodyHandlers.ofString ());
+        requireOk (resp);
+        JsonNode result = MAPPER.readTree (resp.body ());
+        requireErfolg (result);
+        return result;
+    }
+
+    public JsonNode put (String path, ObjectNode body) throws Exception {
+        HttpRequest req = HttpRequest.newBuilder ()
+            .uri (URI.create (config.getUrl () + path))
+            .header ("Cookie", "JSESSIONID=" + config.getSession ())
+            .header ("Content-Type", "application/json")
+            .PUT (HttpRequest.BodyPublishers.ofString (body.toString (), StandardCharsets.UTF_8))
+            .build ();
+        HttpResponse<String> resp = http.send (req, HttpResponse.BodyHandlers.ofString ());
+        requireOk (resp);
+        JsonNode result = MAPPER.readTree (resp.body ());
+        requireErfolg (result);
+        return result;
+    }
+
+    public void delete (String path) throws Exception {
+        HttpRequest req = HttpRequest.newBuilder ()
+            .uri (URI.create (config.getUrl () + path))
+            .header ("Cookie", "JSESSIONID=" + config.getSession ())
+            .DELETE ()
+            .build ();
+        HttpResponse<String> resp = http.send (req, HttpResponse.BodyHandlers.ofString ());
+        requireOk (resp);
+        requireErfolg (MAPPER.readTree (resp.body ()));
+    }
+
     /**
      *  Sucht in einem Store. <b>Der Store kennt keinen Parameter {@code query}</b> –
      *  er beantwortet ihn mit {@code success:false}. Gesucht wird ueber {@code filter}.
