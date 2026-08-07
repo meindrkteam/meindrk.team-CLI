@@ -116,6 +116,9 @@ public class CLI {
             case "kalender":
                 runKalender (client, args, json);
                 break;
+            case "termin":
+                runTermin (client, args, json);
+                break;
             default:
                 exitWithError ("Unbekannter Befehl: " + cmd, json);
         }
@@ -229,7 +232,7 @@ public class CLI {
     // -------------------------------------------------------------------------
 
     private static void runProjekt (RestClient client, String[] args, boolean json) throws Exception {
-        JsonNode result = client.getList ("Projekt", 1000, null, null, null);
+        JsonNode result = client.getList ("Projekt", 1000, null, null, null, null);
         printResult (result.path ("root"), new String[]{"id", "name", "organisation", "prefix"}, json);
     }
 
@@ -244,7 +247,7 @@ public class CLI {
                 String kvid  = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
                 String query = arg (args, "--q",     null);
                 int limit    = pruefeZahl (arg (args, "--limit", "100"), "limit");
-                JsonNode list = client.getList ("Person", limit, query, "nachname", kvid);
+                JsonNode list = client.getList ("Person", limit, query, "nachname", "projektID", kvid);
                 printResult (list.path ("root"),
                     new String[]{"id", "projektID", "nachname", "vorname", "geburtsdatum", "status", "aktiv"}, json);
                 break;
@@ -266,7 +269,7 @@ public class CLI {
     private static void runGruppe (RestClient client, String[] args, boolean json) throws Exception {
         String kvid  = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
         String query = arg (args, "--q",    null);
-        JsonNode result = client.getList ("Gruppe", 1000, query, "name", kvid);
+        JsonNode result = client.getList ("Gruppe", 1000, query, "name", "projektID", kvid);
         printResult (result.path ("root"), new String[]{"id", "projektID", "name"}, json);
     }
 
@@ -276,7 +279,7 @@ public class CLI {
 
     private static void runBenutzer (RestClient client, String[] args, boolean json) throws Exception {
         String kvid = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
-        JsonNode result = client.getList ("Benutzer", 1000, null, null, kvid);
+        JsonNode result = client.getList ("Benutzer", 1000, null, null, "projektID", kvid);
         printResult (result.path ("root"),
             new String[]{"id", "projektID", "login", "vorname", "nachname", "email", "deaktiviert"}, json);
     }
@@ -287,8 +290,42 @@ public class CLI {
 
     private static void runKalender (RestClient client, String[] args, boolean json) throws Exception {
         String kvid = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
-        JsonNode result = client.getList ("Calendar", 1000, null, null, kvid);
+        JsonNode result = client.getList ("Calendar", 1000, null, null, "projektID", kvid);
         printResult (result.path ("root"), new String[]{"id", "projektID", "name"}, json);
+    }
+
+    // -------------------------------------------------------------------------
+    // termin
+    // -------------------------------------------------------------------------
+
+    private static void runTermin (RestClient client, String[] args, boolean json) throws Exception {
+        String sub = sub (args);
+        switch (sub) {
+            case "list":
+                runTerminList (client, args, json);
+                break;
+            case "get":
+                runTerminGet (client, args, json);
+                break;
+            default:
+                exitWithError ("Unbekannter Subbefehl: " + sub, json);
+        }
+    }
+
+    private static void runTerminList (RestClient client, String[] args, boolean json) throws Exception {
+        String calendarId = pruefeId (arg (args, "--calendar", null), "calendar");
+        String query      = arg (args, "--q", null);
+        int limit         = pruefeZahl (arg (args, "--limit", "100"), "limit");
+        JsonNode result = client.getList ("CalendarEvent", limit, query, "name", "calendarID", calendarId);
+        printResult (result.path ("root"),
+            new String[]{"id", "calendarID", "name", "startDate", "startTime", "endDate", "endTime", "type"}, json);
+    }
+
+    private static void runTerminGet (RestClient client, String[] args, boolean json) throws Exception {
+        String id = positional (args, 2);
+        if (id == null) { exitWithError ("Termin-ID fehlt.", json); return; }
+        JsonNode termin = client.get ("/backend/rest/CalendarEvent/" + pruefeId (id, "Termin-ID"));
+        printResult (termin, null, json);
     }
 
     // -------------------------------------------------------------------------
@@ -300,7 +337,7 @@ public class CLI {
      *  Schalter oder als Positional-Argument gelesen werden – sonst wird aus
      *  <code>--q --insecure</code> ein globaler Schalter. */
     static final java.util.Set<String> WERT_FLAGS =
-        java.util.Set.of ("--password", "--token", "--q", "--kvid", "--limit");
+        java.util.Set.of ("--password", "--token", "--q", "--kvid", "--limit", "--calendar");
 
     /** true, wenn args[i] der Wert eines vorangehenden Wert-Flags ist. */
     static boolean istKonsumierterWert (String[] args, int i) {
@@ -455,6 +492,16 @@ public class CLI {
         befehl (cmds, "projekt_list",
             "Alle Kreisverbaende (Projekte) auflisten, auf die der Benutzer Zugriff hat.");
 
+        ObjectNode terminList = befehl (cmds, "termin_list",
+            "Termine (Kalendereintraege) eines Kalenders auflisten oder durchsuchen.");
+        param (terminList, "calendar", "string", false, null, "flag", "Kalender-ID (aus kalender_list)");
+        param (terminList, "q",        "string", false, null, "flag", "Suchtext im Titel (Teiltreffer)");
+        param (terminList, "limit",    "integer", false, "100", "flag", "Maximale Trefferzahl");
+
+        ObjectNode terminGet = befehl (cmds, "termin_get",
+            "Alle Details zu genau einem Termin anhand seiner ID.");
+        param (terminGet, "id", "string", true, null, "positional", "Termin-ID, z. B. aus termin_list");
+
         System.out.println (root.toString ());
     }
 
@@ -498,6 +545,9 @@ public class CLI {
         System.out.println ("  gruppe  list [--kvid <id>] [--q <text>]  Gruppen auflisten");
         System.out.println ("  benutzer list [--kvid <id>]            Admin-Benutzer auflisten");
         System.out.println ("  kalender list [--kvid <id>]            Kalender auflisten (liefert calendarID)");
+        System.out.println ("  termin  list [--calendar <id>] [--q <text>] [--limit <n>]");
+        System.out.println ("                                         Termine auflisten");
+        System.out.println ("  termin  get <id>                       Termin-Details anzeigen");
         System.out.println ("  manifest --json                        Befehlskatalog als JSON (fuer aufrufende Dienste)");
         System.out.println ("  help                                   Diese Hilfe");
         System.out.println ();

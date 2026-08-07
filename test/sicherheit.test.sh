@@ -207,7 +207,7 @@ import de.kreisalarm.cli.RestClient;
 
 public class FilterProbe {
     public static void main (String[] a) throws Exception {
-        new RestClient (new Config ()).getList ("Person", 5, null, null, a[0]);
+        new RestClient (new Config ()).getList ("Person", 5, null, null, "projektID", a[0]);
     }
 }
 JAVA

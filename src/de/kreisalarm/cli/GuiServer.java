@@ -416,7 +416,7 @@ function esc(s){
         boolean loggedIn = false;
         if (config.getUrl () != null && config.getSession () != null) {
             try {
-                new RestClient (config, false).getList ("Projekt", 1, null, null, null);
+                new RestClient (config, false).getList ("Projekt", 1, null, null, null, null);
                 loggedIn = true;
             } catch (Exception ignored) {}
         }
@@ -497,16 +497,16 @@ function esc(s){
             try { lim = Integer.parseInt (limit); } catch (NumberFormatException ignored) {}
             switch (cmd) {
                 case "projekt list":
-                    data = client.getList ("Projekt", 1000, null, null, null).path ("root"); break;
+                    data = client.getList ("Projekt", 1000, null, null, null, null).path ("root"); break;
                 case "person list":
-                    data = client.getList ("Person", lim, q, "nachname", kvid).path ("root"); break;
+                    data = client.getList ("Person", lim, q, "nachname", "projektID", kvid).path ("root"); break;
                 case "person get":
                     if (id == null) { sendJson (ex, "{\"ok\":false,\"error\":\"ID fehlt\"}"); return; }
                     data = client.get ("/backend/rest/Person/" + id); break;
                 case "gruppe list":
-                    data = client.getList ("Gruppe", 1000, q, "name", kvid).path ("root"); break;
+                    data = client.getList ("Gruppe", 1000, q, "name", "projektID", kvid).path ("root"); break;
                 case "benutzer list":
-                    data = client.getList ("Benutzer", 1000, null, null, kvid).path ("root"); break;
+                    data = client.getList ("Benutzer", 1000, null, null, "projektID", kvid).path ("root"); break;
                 default:
                     sendJson (ex, "{\"ok\":false,\"error\":\"Unbekannter Befehl\"}"); return;
             }

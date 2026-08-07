@@ -152,14 +152,17 @@ public class RestClient {
      *
      *  @param queryProperty Eigenschaft, in der {@code query} gesucht wird
      *                       (Person: nachname, Gruppe: name). Null = keine Suche.
+     *  @param filterProperty Eigenschaft, ueber die exakt gefiltert wird
+     *                       (meist projektID; CalendarEvent hat kein projektID
+     *                       und filtert stattdessen ueber calendarID). Null = kein Filter.
      */
     public JsonNode getList (String className, int limit, String query, String queryProperty,
-                             String kvid) throws Exception {
+                             String filterProperty, String filterValue) throws Exception {
         Map<String, String> params = new LinkedHashMap<> ();
         params.put ("start", "0");
         params.put ("limit", String.valueOf (limit));
 
-        // Mit Jackson bauen statt zusammenkleben: query und kvid stammen bei
+        // Mit Jackson bauen statt zusammenkleben: query und filterValue stammen bei
         // Dienst-Aufrufen aus einem Sprachmodell und koennten sonst eigene
         // Filter-Eigenschaften in die Abfrage schmuggeln.
         ArrayNode filter = MAPPER.createArrayNode ();
@@ -168,10 +171,10 @@ public class RestClient {
             f.put ("property", queryProperty);
             f.put ("value", query);          // ohne exact -> Teiltreffer
         }
-        if (kvid != null && !kvid.isBlank ()) {
+        if (filterValue != null && !filterValue.isBlank () && filterProperty != null) {
             ObjectNode f = filter.addObject ();
-            f.put ("property", "projektID");
-            f.put ("value", kvid);
+            f.put ("property", filterProperty);
+            f.put ("value", filterValue);
             f.put ("exact", true);
         }
         if (!filter.isEmpty ())
