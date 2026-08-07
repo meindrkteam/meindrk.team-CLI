@@ -51,7 +51,7 @@ fail=0
 
 : > "$MITSCHRIFT"
 out="$(run --json kalender list --kvid 42 2>&1)"
-python3 - "$(cat "$MITSCHRIFT")" "$out" <<'PY' || fail=1
+MSYS_NO_PATHCONV=1 python3 - "$(cat "$MITSCHRIFT")" "$out" <<'PY' || fail=1
 import sys, json, urllib.parse
 pfad, out = sys.argv[1], sys.argv[2]
 assert "/backend/rest/store/Calendar/view/Extended" in pfad, pfad

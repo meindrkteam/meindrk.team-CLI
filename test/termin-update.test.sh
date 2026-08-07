@@ -30,8 +30,13 @@ class H (BaseHTTPRequestHandler):
         with open (mitschrift, "a") as f:
             f.write (json.dumps ({"pfad": self.path, "body": body}) + "\n")
         geaendert = json.loads (body)
-        geaendert["id"] = 9
-        antwort = json.dumps ({"root": [geaendert], "total": 1}).encode ()
+        if self.path.endswith ("/77"):
+            # simuliert einen Server, der die Antwort NICHT in "root" einpackt
+            geaendert["id"] = 77
+            antwort = json.dumps (geaendert).encode ()
+        else:
+            geaendert["id"] = 9
+            antwort = json.dumps ({"root": [geaendert], "total": 1}).encode ()
         self.send_response (200)
         self.send_header ("Content-Type", "application/json")
         self.send_header ("Content-Length", str (len (antwort)))
@@ -73,5 +78,33 @@ out = json.loads (sys.argv[2])
 assert out["ok"] is True and out["data"]["name"] == "Neuer Name" and out["data"]["id"] == 9, out
 print ("  ok: termin update sendet nur gesetzte Felder, packt root[0] aus")
 PY
+
+# ── 3) Antwort ohne root-Wrapper -> Rohobjekt statt data:null ────────────────
+: > "$MITSCHRIFT"
+out="$(run --json termin update 77 --name "Ohne Wrapper" 2>&1)"
+python3 - "$(cat "$MITSCHRIFT")" "$out" <<'PY' || fail=1
+import sys, json
+d = json.loads (sys.argv[1])
+assert d["pfad"] == "/backend/rest/CalendarEvent/77", d
+out = json.loads (sys.argv[2])
+assert out["ok"] is True, out
+assert out["data"] is not None, out
+assert out["data"]["name"] == "Ohne Wrapper" and out["data"]["id"] == 77, out
+print ("  ok: Antwort ohne root-Wrapper faellt auf das Rohobjekt zurueck")
+PY
+
+# ── 4) Keine Feld-Flags -> Fehler, kein PUT ──────────────────────────────────
+: > "$MITSCHRIFT"
+err="$(run --json termin update 9 2>&1 >/dev/null)"
+echo "$err" | python3 -c '
+import sys, json
+d = json.loads (sys.stdin.read ().strip ())
+assert d["ok"] is False, d
+' || { echo "  FAIL: termin update ohne Feld-Flags wurde nicht abgewiesen"; fail=1; }
+if [ -s "$MITSCHRIFT" ]; then
+  echo "  FAIL: termin update ohne Feld-Flags hat trotzdem ein PUT ausgeloest"; fail=1
+else
+  echo "  ok: termin update ohne Feld-Flags sendet kein PUT"
+fi
 
 [ "$fail" = "0" ] && echo "OK termin-update" || exit 1

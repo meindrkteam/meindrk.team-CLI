@@ -385,8 +385,10 @@ public class CLI {
         if (id == null) { exitWithError ("Termin-ID fehlt.", json); return; }
         String terminId = pruefeId (id, "Termin-ID");
         ObjectNode body = terminBody (args);
+        if (body.isEmpty ()) { exitWithError ("Keine zu aendernden Felder angegeben.", json); return; }
         JsonNode result = client.put ("/backend/rest/CalendarEvent/" + terminId, body);
-        printResult (result.path ("root").path (0), null, json);
+        JsonNode root = result.path ("root");
+        printResult (root.isArray () && !root.isEmpty () ? root.path (0) : result, null, json);
     }
 
     private static void runTerminDelete (RestClient client, String[] args, boolean json) throws Exception {
@@ -601,7 +603,7 @@ public class CLI {
 
         ObjectNode terminList = befehl (cmds, "termin_list",
             "Termine (Kalendereintraege) eines Kalenders auflisten oder durchsuchen.", "lesen");
-        param (terminList, "calendar", "string", false, null, "flag", "Kalender-ID (aus kalender_list)");
+        param (terminList, "calendar", "string", false, null, "flag", "Kalender-ID (aus kalender_list); leer = alle Kalender ungefiltert");
         param (terminList, "q",        "string", false, null, "flag", "Suchtext im Titel (Teiltreffer)");
         param (terminList, "limit",    "integer", false, "100", "flag", "Maximale Trefferzahl");
 
@@ -621,10 +623,10 @@ public class CLI {
         param (terminCreate, "type",                    "string", false, null,    "flag", "Freitext-Kategorie");
         param (terminCreate, "ort",                     "string", false, null,    "flag", "DpVeranstaltungOrt-ID");
         param (terminCreate, "tags",                    "string", false, null,    "flag", "Kommagetrennte Tags");
-        param (terminCreate, "feedback",                "string", false, "INVITED", "flag", "NONE|ALL|INVITED");
-        param (terminCreate, "allowFreeRegistration",   "string", false, "false", "flag", "true|false");
-        param (terminCreate, "gpsNearbyRequired",       "string", false, "false", "flag", "true|false");
-        param (terminCreate, "countAsService",          "string", false, "false", "flag", "true|false");
+        param (terminCreate, "feedback",                "string", false, null, "flag", "NONE|ALL|INVITED");
+        param (terminCreate, "allowFreeRegistration",   "string", false, null, "flag", "true|false");
+        param (terminCreate, "gpsNearbyRequired",       "string", false, null, "flag", "true|false");
+        param (terminCreate, "countAsService",          "string", false, null, "flag", "true|false");
 
         ObjectNode terminUpdate = befehl (cmds, "termin_update",
             "Vorhandenen Termin aendern. Nur angegebene Felder werden geaendert.", "schreiben");

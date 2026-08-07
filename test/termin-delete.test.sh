@@ -60,6 +60,17 @@ print ("  ok: --json ohne --yes verlangt Bestaetigung")
 ' || { echo "  FAIL: --json ohne --yes loescht trotzdem"; fail=1; }
 [ -s "$MITSCHRIFT" ] && { echo "  FAIL: trotz fehlendem --yes ging ein DELETE raus"; fail=1; }
 
+# ── 1b) --yes als Wert eines Wert-Flags darf nicht als Bestaetigung zaehlen ──
+: > "$MITSCHRIFT"
+err="$(run --json termin delete 9 --description --yes 2>&1 >/dev/null)"
+echo "$err" | python3 -c '
+import sys, json
+d = json.loads (sys.stdin.read ().strip ())
+assert d["ok"] is False and "yes" in d["error"].lower (), d
+print ("  ok: --description --yes wird nicht als Bestaetigung durchgeschmuggelt")
+' || { echo "  FAIL: --yes als Wert von --description loescht trotzdem"; fail=1; }
+[ -s "$MITSCHRIFT" ] && { echo "  FAIL: --description --yes hat trotzdem ein DELETE ausgeloest"; fail=1; }
+
 # ── 2) JSON-Modus mit --yes -> DELETE an die richtige ID ─────────────────────
 : > "$MITSCHRIFT"
 out="$(run --json termin delete 9 --yes 2>&1)"
