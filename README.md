@@ -152,6 +152,49 @@ Ausgabe: `id`, `projektID`, `login`, `vorname`, `nachname`, `email`, `deaktivier
 
 ---
 
+### `kalender list` — Kalender auflisten
+
+```
+meindrk-cli kalender list [--kvid <id>]
+```
+
+| Option | Beschreibung |
+|--------|-------------|
+| `--kvid <id>` | Ergebnisse auf einen Kreisverband einschränken. |
+
+Ausgabe: `id`, `projektID`, `name`, `besitz`. Die `id` ist die `calendarID` für `termin create`.
+
+`besitz` sagt, wie der angemeldete Benutzer zu diesem Kalender steht — feste Bezeichner, keine Anzeigetexte:
+
+| Wert | Bedeutung |
+|------|-----------|
+| `eigen` | Der Kalender gehört dem Benutzer selbst. Schlägt `eigener_kv`: die genauere Aussage ist die nützlichere. |
+| `eigener_kv` | Gehört dem Kreisverband des Benutzers. |
+| `fremder_kv` | Gehört einem anderen Kreisverband — der Benutzer sieht ihn, weil er eingeladen wurde. |
+| `unbekannt` | Der angemeldete Benutzer ließ sich nicht ermitteln. **Nicht geraten**: eine bestimmt klingende, falsche Zuordnung wäre schlechter als gar keine. |
+
+Ermittelt über `GET /backend/rest/current-user`, einmal je Prozess. Fällt der Aufruf aus, bleibt die Auflistung nutzbar und alle Einträge stehen auf `unbekannt`.
+
+Ob der Benutzer auf einen Kalender **schreiben** darf, steht hier noch nicht: Der Zugriff kann über eine Gruppe vermittelt sein, und die Gruppenmitgliedschaften kennt die CLI nicht. Das muss der Server mitliefern.
+
+---
+
+### `termin list` / `get` / `create` / `update` / `delete` — Termine (CalendarEvent)
+
+```
+meindrk-cli termin list [--calendar <id>] [--q <text>] [--limit <n>]
+meindrk-cli termin get <id>
+meindrk-cli termin create --calendar <id> --name <text> [--start <JJJJMMTT>] …
+meindrk-cli termin update <id> [--name <text>] …
+meindrk-cli termin delete <id> [--yes]
+```
+
+Die `--calendar`-ID stammt aus `kalender list`. Vollständige Parameterliste: `meindrk-cli --json manifest`.
+
+`termin delete` verlangt im JSON-Modus **`--yes`** und bricht sonst mit einem Fehler ab — ein Aufruf aus einem Dienst hat kein Terminal und darf ein Löschen weder durch eine fehlende Rückfrage blockieren noch stillschweigend bestätigen. Im Textmodus wird interaktiv nachgefragt.
+
+---
+
 ### `help` — Hilfe anzeigen
 
 ```

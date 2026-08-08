@@ -30,7 +30,7 @@ public class CLI {
     private static final ObjectMapper MAPPER = new ObjectMapper ();
 
     /** Muss beim Release mit dem Git-Tag uebereinstimmen. */
-    private static final String CLI_VERSION = "0.1.7";
+    private static final String CLI_VERSION = "0.1.8";
 
     public static void main (String[] args) throws Exception {
         boolean json = hasFlag (args, "--json");
@@ -291,8 +291,55 @@ public class CLI {
     private static void runKalender (RestClient client, String[] args, boolean json) throws Exception {
         String kvid = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
         JsonNode result = client.getList ("Calendar", 1000, null, null, "projektID", kvid);
-        printResult (result.path ("root"), new String[]{"id", "projektID", "name"}, json);
+        JsonNode root = result.path ("root");
+        besitzErgaenzen (root, client.currentUser ());
+        printResult (root, new String[]{"id", "projektID", "name", "besitz"}, json);
     }
+
+    /**
+     * Traegt je Kalender ein, in welchem Verhaeltnis der angemeldete Benutzer
+     * zu ihm steht. Ohne diese Angabe ist eine Kalender-ID fuer einen Menschen
+     * wertlos: man kann zu fremden Kalendern eingeladen sein, "eigener
+     * Kreisverband" und "mir gehoerend" sind zweierlei.
+     */
+    private static void besitzErgaenzen (JsonNode root, JsonNode ich) {
+        if (root == null || !root.isArray ())
+            return;
+        for (JsonNode k : root)
+            if (k instanceof ObjectNode o)
+                o.put ("besitz", besitzBestimmen (o, ich));
+        }
+
+    /**
+     * eigen | eigener_kv | fremder_kv | unbekannt.
+     *
+     * <p>Feste Bezeichner, keine Anzeigetexte: der Wert wird maschinell
+     * ausgewertet, formuliert wird beim Aufrufer.
+     *
+     * <p><b>unbekannt</b> statt zu raten. Laesst sich der Sitzungsbenutzer
+     * nicht ermitteln oder fehlt eine der Projekt-IDs, waere jede Aussage
+     * geraten — und "fremder_kv" auf Verdacht ist die schlechteste Antwort:
+     * sie klingt bestimmt und kann falsch sein.
+     */
+    private static String besitzBestimmen (JsonNode kalender, JsonNode ich) {
+        if (ich == null)
+            return "unbekannt";
+        // -1 ist der Standardwert dieser Felder und darf nie als Treffer zaehlen.
+        long meineID     = ich.path ("id").asLong (-1);
+        long meinePerson = ich.path ("personID").asLong (-1);
+        long meinProjekt = ich.path ("projektID").asLong (-1);
+        long besitzerB   = kalender.path ("benutzerID").asLong (-1);
+        long besitzerP   = kalender.path ("personID").asLong (-1);
+        long projekt     = kalender.path ("projektID").asLong (-1);
+
+        if (meineID > 0 && besitzerB == meineID)
+            return "eigen";
+        if (meinePerson > 0 && besitzerP == meinePerson)
+            return "eigen";
+        if (meinProjekt <= 0 || projekt <= 0)
+            return "unbekannt";
+        return projekt == meinProjekt ? "eigener_kv" : "fremder_kv";
+        }
 
     // -------------------------------------------------------------------------
     // termin
@@ -595,7 +642,10 @@ public class CLI {
         param (benutzerList, "kvid", "string", false, null, "flag", "Kreisverband-ID");
 
         ObjectNode kalenderList = befehl (cmds, "kalender_list",
-            "Kalender eines Kreisverbands auflisten (liefert die calendarID fuer termin_create).", "lesen");
+            "Kalender eines Kreisverbands auflisten (liefert die calendarID fuer termin_create). "
+            + "Je Kalender steht in besitz, wie der angemeldete Benutzer zu ihm steht: "
+            + "eigen (gehoert ihm selbst), eigener_kv, fremder_kv (dorthin eingeladen) "
+            + "oder unbekannt.", "lesen");
         param (kalenderList, "kvid", "string", false, null, "flag", "Kreisverband-ID");
 
         befehl (cmds, "projekt_list",
@@ -702,7 +752,7 @@ public class CLI {
         System.out.println ("  person get <id>                        Person-Details anzeigen");
         System.out.println ("  gruppe  list [--kvid <id>] [--q <text>]  Gruppen auflisten");
         System.out.println ("  benutzer list [--kvid <id>]            Admin-Benutzer auflisten");
-        System.out.println ("  kalender list [--kvid <id>]            Kalender auflisten (liefert calendarID)");
+        System.out.println ("  kalender list [--kvid <id>]            Kalender auflisten (calendarID + besitz)");
         System.out.println ("  termin  list [--calendar <id>] [--q <text>] [--limit <n>]");
         System.out.println ("                                         Termine auflisten");
         System.out.println ("  termin  get <id>                       Termin-Details anzeigen");
