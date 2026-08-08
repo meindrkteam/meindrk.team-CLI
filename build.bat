@@ -11,7 +11,7 @@ set "JAR_FILE=%TMP_DIR%\meindrk-cli.jar"
 set "GRAALVM_VERSION=21.0.2"
 set "GRAALVM_URL=https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-%GRAALVM_VERSION%/graalvm-community-jdk-%GRAALVM_VERSION%_windows-x64_bin.zip"
 set "GRAALVM_ZIP=%CLI_DIR%graalvm-dl\graalvm-win.zip"
-set "VS_INSTALL_PATH=d:\Program Files\Microsoft Visual Studio\2022\BuildTools"
+set "VS_INSTALL_PATH=d:\Program Files\Microsoft Visual Studio\18\BuildTools"
 set "VCVARSALL="
 
 echo.
@@ -81,25 +81,33 @@ if exist "%VSWHERE%" (
 )
 if defined VCVARSALL goto :vcvars_found
 
-for %%v in ("BuildTools" "Community" "Professional" "Enterprise") do (
-    if exist "d:\Program Files\Microsoft Visual Studio\2022\%%~v\VC\Auxiliary\Build\vcvarsall.bat" (
-        set "VCVARSALL=d:\Program Files\Microsoft Visual Studio\2022\%%~v\VC\Auxiliary\Build\vcvarsall.bat"
-        goto :vcvars_found
+:: "18" = VS2026-Ordnername (ab VS2026 steht die interne Versionsnummer statt
+:: der Jahreszahl im Pfad), "2022" bleibt als Fallback fuer aeltere Installs.
+for %%y in ("18" "2022") do (
+    for %%v in ("BuildTools" "Community" "Professional" "Enterprise") do (
+        if exist "d:\Program Files\Microsoft Visual Studio\%%~y\%%~v\VC\Auxiliary\Build\vcvarsall.bat" (
+            set "VCVARSALL=d:\Program Files\Microsoft Visual Studio\%%~y\%%~v\VC\Auxiliary\Build\vcvarsall.bat"
+            goto :vcvars_found
+        )
     )
 )
-for %%v in ("BuildTools" "Community" "Professional" "Enterprise") do (
-    if exist "C:\Program Files\Microsoft Visual Studio\2022\%%~v\VC\Auxiliary\Build\vcvarsall.bat" (
-        set "VCVARSALL=C:\Program Files\Microsoft Visual Studio\2022\%%~v\VC\Auxiliary\Build\vcvarsall.bat"
-        goto :vcvars_found
+for %%y in ("18" "2022") do (
+    for %%v in ("BuildTools" "Community" "Professional" "Enterprise") do (
+        if exist "C:\Program Files\Microsoft Visual Studio\%%~y\%%~v\VC\Auxiliary\Build\vcvarsall.bat" (
+            set "VCVARSALL=C:\Program Files\Microsoft Visual Studio\%%~y\%%~v\VC\Auxiliary\Build\vcvarsall.bat"
+            goto :vcvars_found
+        )
     )
 )
-if exist "%LOCALAPPDATA%\Programs\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" (
-    set "VCVARSALL=%LOCALAPPDATA%\Programs\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat"
-    goto :vcvars_found
+for %%y in ("18" "2022") do (
+    if exist "%LOCALAPPDATA%\Programs\Microsoft Visual Studio\%%~y\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" (
+        set "VCVARSALL=%LOCALAPPDATA%\Programs\Microsoft Visual Studio\%%~y\BuildTools\VC\Auxiliary\Build\vcvarsall.bat"
+        goto :vcvars_found
+    )
 )
 
 echo.
-echo [VS] Visual Studio Build Tools 2022 nicht gefunden.
+echo [VS] Visual Studio Build Tools nicht gefunden.
 echo      Benoetigt fuer GraalVM native-image (MSVC-Linker).
 echo      Installpfad: %VS_INSTALL_PATH%
 echo      Komponenten: VC.Tools.x86.x64 + Windows11SDK.22621
@@ -115,7 +123,7 @@ if /i not "%VS_CONFIRM%"=="j" (
     echo Abgebrochen. Bitte Visual Studio Build Tools manuell installieren.
     exit /b 1
 )
-winget install --id Microsoft.VisualStudio.2022.BuildTools --silent --accept-package-agreements --accept-source-agreements --override "--quiet --wait --norestart --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows11SDK.22621 --installPath ""%VS_INSTALL_PATH%"""
+winget install --id Microsoft.VisualStudio.BuildTools --silent --accept-package-agreements --accept-source-agreements --override "--quiet --wait --norestart --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows11SDK.22621 --installPath ""%VS_INSTALL_PATH%"""
 if errorlevel 1 ( echo FEHLER: VS Build Tools Installation fehlgeschlagen. & exit /b 1 )
 
 if exist "%VS_INSTALL_PATH%\VC\Auxiliary\Build\vcvarsall.bat" (

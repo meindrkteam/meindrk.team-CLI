@@ -50,3 +50,14 @@ Alle 10 `test/*.test.sh` grün auf `main` nach dem Merge:
 - `README.md` dokumentiert noch die alten 6 Befehle, nicht die neuen 11 — vor einem Release nachziehen.
 - `CLI_VERSION` (`CLI.java:33`) beim Release hochzählen — dieser Branch erweitert zwei `manifest --json`-Enums (`modus` um `"schreiben"`, `uebergabe` um `"schalter"`), ein Consumer, der die alten Werte hart annimmt, würde brechen.
 - Empfehlung aus der finalen Review: ein Grep-basierter Test, der automatisch prüft, dass jedes `arg(args,"--x",...)`-Flag auch in `WERT_FLAGS` steht (Sicherheits-Invariante, aktuell nur manuell geprüft).
+
+## Nachtrag 2026-08-08: nativer Windows-Build + VS2026
+
+- Alter `build/meindrk-cli-windows-x64.exe` war Mai-Stand (vor Termin-CRUD) — mit `build.bat` neu gebaut, jetzt aktuell (`main` @ Stand nach Merge oben).
+- `build.bat` brauchte MSVC-Linker (Visual Studio Build Tools), war auf diesem Rechner nicht installiert. Ueber winget installiert: **Visual Studio 2026 Build Tools** (Version 18.x) — neueste verfuegbare Version statt VS2022.
+- `build.bat` angepasst, da VS2026 eine andere Ordnerstruktur nutzt (`...\Microsoft Visual Studio\18\BuildTools` statt `...\2022\BuildTools`, Versionsnummer statt Jahreszahl im Pfad):
+  - `VS_INSTALL_PATH` auf `18`-Ordner umgestellt
+  - Erkennungs-Fallback-Schleifen suchen jetzt sowohl `18` als auch `2022` (Rueckwaertskompatibilitaet zu Rechnern mit VS2022)
+  - winget-Installbefehl nutzt jetzt die generische ID `Microsoft.VisualStudio.BuildTools` (installiert automatisch die jeweils neueste Version) statt der fest verdrahteten `Microsoft.VisualStudio.2022.BuildTools`
+- `vswhere.exe`-Aufruf im Skript lief bei diesem Durchlauf zwar ins Leere (Fehlermeldung im Log), war aber unschaedlich: `VCVARSALL` war zu dem Zeitpunkt schon ueber den frisch installierten `VS_INSTALL_PATH` gesetzt.
+- Merke fuers naechste Mal: **nach jeder neuen CLI-Version auch `build.bat` laufen lassen**, nicht nur committen/pushen — sonst veraltet die `.exe` unbemerkt (ist in Claude-Code-Memory hinterlegt, siehe `feedback_cli_build_after_version_bump` in `~/.claude/projects/.../memory/`).
