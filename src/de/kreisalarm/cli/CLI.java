@@ -6,6 +6,9 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.Console;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -30,7 +33,7 @@ public class CLI {
     private static final ObjectMapper MAPPER = new ObjectMapper ();
 
     /** Muss beim Release mit dem Git-Tag uebereinstimmen. */
-    private static final String CLI_VERSION = "0.1.8";
+    private static final String CLI_VERSION = "0.1.9";
 
     public static void main (String[] args) throws Exception {
         boolean json = hasFlag (args, "--json");
@@ -292,9 +295,79 @@ public class CLI {
         String kvid = pruefeId (arg (args, "--kvid", null), "Kreisverband-ID");
         JsonNode result = client.getList ("Calendar", 1000, null, null, "projektID", kvid);
         JsonNode root = result.path ("root");
-        besitzErgaenzen (root, client.currentUser ());
-        printResult (root, new String[]{"id", "projektID", "name", "besitz"}, json);
+        JsonNode ich = client.currentUser ();
+        besitzErgaenzen (root, ich);
+        schreibrechtErgaenzen (client, root, ich);
+        printResult (root, new String[]{"id", "projektID", "name", "besitz", "schreiben"}, json);
     }
+
+    /**
+     * Traegt je Kalender ein, ob der angemeldete Benutzer hineinschreiben darf.
+     *
+     * <p>Unabhaengig vom Besitz: Ein Kalender eines fremden Kreisverbands kann
+     * beschreibbar sein, einer des eigenen nur lesbar. Wer einen Termin anlegen
+     * will, braucht diese Angabe — sonst erfaehrt er es erst, wenn der Server
+     * das Anlegen ablehnt.
+     *
+     * <p>Ohne ermittelbaren Benutzer bleibt das Feld WEG statt auf false zu
+     * stehen. Ein falsches "du darfst nicht" ist schlimmer als keine Angabe:
+     * es entwertet beim ersten Gegenbeweis jede weitere Warnung.
+     */
+    private static void schreibrechtErgaenzen (RestClient client, JsonNode root, JsonNode ich) {
+        if (root == null || !root.isArray () || ich == null)
+            return;
+        long meineID     = ich.path ("id").asLong (-1);
+        long meinePerson = ich.path ("personID").asLong (-1);
+
+        // Erst sammeln, welche Gruppen ueberhaupt Schreibrecht gewaehren, dann
+        // je Gruppe EINMAL fragen. Eine Gruppe, die nur Leserecht gibt, zu
+        // befragen waere ein Aufruf ohne Erkenntnis.
+        Set<Long> zuPruefen = new LinkedHashSet<> ();
+        for (JsonNode k : root)
+            for (JsonNode a : k.path ("calendarAccesses"))
+                if (a.path ("writeAccess").asBoolean (false)) {
+                    long g = a.path ("gruppeID").asLong (-1);
+                    if (g > 0)
+                        zuPruefen.add (g);
+                    }
+
+        Set<Long> meineGruppen = new HashSet<> ();
+        for (Long g : zuPruefen) {
+            JsonNode personen = client.gruppePersonIds (g);
+            if (personen == null || !personen.isArray ())
+                continue;                       // Ausfall -> Gruppe zaehlt nicht
+            for (JsonNode p : personen)
+                if (meinePerson > 0 && p.path ("id").asLong (-1) == meinePerson) {
+                    meineGruppen.add (g);
+                    break;
+                    }
+            }
+
+        for (JsonNode k : root)
+            if (k instanceof ObjectNode o)
+                o.put ("schreiben", darfSchreiben (o, meineID, meinePerson, meineGruppen));
+        }
+
+    /** Besitzer duerfen immer; sonst zaehlt eine Freigabe mit writeAccess. */
+    private static boolean darfSchreiben (JsonNode kalender, long meineID, long meinePerson,
+                                          Set<Long> meineGruppen) {
+        if (meineID > 0 && kalender.path ("benutzerID").asLong (-1) == meineID)
+            return true;
+        if (meinePerson > 0 && kalender.path ("personID").asLong (-1) == meinePerson)
+            return true;
+        for (JsonNode a : kalender.path ("calendarAccesses")) {
+            if (!a.path ("writeAccess").asBoolean (false))
+                continue;
+            if (meineID > 0 && a.path ("benutzerID").asLong (-1) == meineID)
+                return true;
+            if (meinePerson > 0 && a.path ("personID").asLong (-1) == meinePerson)
+                return true;
+            long g = a.path ("gruppeID").asLong (-1);
+            if (g > 0 && meineGruppen.contains (g))
+                return true;
+            }
+        return false;
+        }
 
     /**
      * Traegt je Kalender ein, in welchem Verhaeltnis der angemeldete Benutzer
@@ -635,18 +708,26 @@ public class CLI {
         ObjectNode gruppeList = befehl (cmds, "gruppe_list",
             "Gruppen eines Kreisverbands auflisten.", "lesen");
         param (gruppeList, "q",    "string", false, null, "flag", "Suchtext im Gruppennamen (Teiltreffer)");
-        param (gruppeList, "kvid", "string", false, null, "flag", "Kreisverband-ID");
+        param (gruppeList, "kvid", "string", false, null, "flag",
+            "Optionaler Filter auf einen Kreisverband. LEER LASSEN - der Server leitet ihn aus der Sitzung ab. Den Benutzer NIEMALS danach fragen.");
 
         ObjectNode benutzerList = befehl (cmds, "benutzer_list",
             "Administrative Benutzerkonten eines Kreisverbands auflisten.", "lesen");
-        param (benutzerList, "kvid", "string", false, null, "flag", "Kreisverband-ID");
+        param (benutzerList, "kvid", "string", false, null, "flag",
+            "Optionaler Filter auf einen Kreisverband. LEER LASSEN - der Server leitet ihn aus der Sitzung ab. Den Benutzer NIEMALS danach fragen.");
 
         ObjectNode kalenderList = befehl (cmds, "kalender_list",
-            "Kalender eines Kreisverbands auflisten (liefert die calendarID fuer termin_create). "
-            + "Je Kalender steht in besitz, wie der angemeldete Benutzer zu ihm steht: "
-            + "eigen (gehoert ihm selbst), eigener_kv, fremder_kv (dorthin eingeladen) "
-            + "oder unbekannt.", "lesen");
-        param (kalenderList, "kvid", "string", false, null, "flag", "Kreisverband-ID");
+            "Alle Kalender auflisten, auf die der angemeldete Benutzer Zugriff hat - "
+            + "auch solche fremder Kreisverbaende, zu denen er eingeladen wurde. "
+            + "Liefert die calendarID fuer termin_create. Je Kalender: besitz "
+            + "(eigen | eigener_kv | fremder_kv | unbekannt) und schreiben "
+            + "(true/false). NUR wo schreiben=true kann ein Termin angelegt werden; "
+            + "lesen geht auch sonst. Fehlt schreiben, liess sich der Benutzer nicht "
+            + "ermitteln - dann nichts behaupten.", "lesen");
+        param (kalenderList, "kvid", "string", false, null, "flag",
+            "Optionaler Filter auf einen Kreisverband. LEER LASSEN - der Server kennt "
+            + "den Benutzer aus der Sitzung und liefert dann alle zugaenglichen Kalender. "
+            + "Den Benutzer NIEMALS nach einem Kreisverband fragen.");
 
         befehl (cmds, "projekt_list",
             "Alle Kreisverbaende (Projekte) auflisten, auf die der Benutzer Zugriff hat.", "lesen");
@@ -752,7 +833,7 @@ public class CLI {
         System.out.println ("  person get <id>                        Person-Details anzeigen");
         System.out.println ("  gruppe  list [--kvid <id>] [--q <text>]  Gruppen auflisten");
         System.out.println ("  benutzer list [--kvid <id>]            Admin-Benutzer auflisten");
-        System.out.println ("  kalender list [--kvid <id>]            Kalender auflisten (calendarID + besitz)");
+        System.out.println ("  kalender list [--kvid <id>]            Kalender auflisten (calendarID, besitz, schreiben)");
         System.out.println ("  termin  list [--calendar <id>] [--q <text>] [--limit <n>]");
         System.out.println ("                                         Termine auflisten");
         System.out.println ("  termin  get <id>                       Termin-Details anzeigen");

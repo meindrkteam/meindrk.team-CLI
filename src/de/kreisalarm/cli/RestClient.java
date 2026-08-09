@@ -138,6 +138,27 @@ public class RestClient {
         return aktuellerBenutzer;
     }
 
+    /**
+     * Person-IDs der Mitglieder einer Gruppe, oder null bei einem Fehler.
+     *
+     * <p>Der Server beruecksichtigt dabei Ein- und Austrittsdatum
+     * (TagSearchService.getGruppePersonIds) — eine ausgeschiedene Person zaehlt
+     * nicht mehr mit. Genau deshalb wird das hier abgefragt und nicht aus einer
+     * Mitgliederliste selbst gerechnet.
+     *
+     * <p>Bewusst EINE Gruppe je Aufruf, obwohl der Endpunkt mehrere annimmt:
+     * bei mehreren liefert er eine flache Personenliste ohne Zuordnung zur
+     * Gruppe. Man wuesste dann, dass man in IRGENDEINER der Gruppen ist, aber
+     * nicht in welcher — und koennte ein Recht dem falschen Kalender zuordnen.
+     */
+    public JsonNode gruppePersonIds (long gruppeID) {
+        try {
+            return get ("/backend/rest/Gruppe/" + gruppeID + "/PersonIds");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public JsonNode post (String path, ObjectNode body) throws Exception {
         HttpRequest req = HttpRequest.newBuilder ()
             .uri (URI.create (config.getUrl () + path))
