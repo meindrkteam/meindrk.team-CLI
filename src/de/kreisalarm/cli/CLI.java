@@ -30,7 +30,7 @@ public class CLI {
     private static final ObjectMapper MAPPER = new ObjectMapper ();
 
     /** Muss beim Release mit dem Git-Tag uebereinstimmen. */
-    private static final String CLI_VERSION = "0.1.10";
+    private static final String CLI_VERSION = "0.1.11";
 
     public static void main (String[] args) throws Exception {
         boolean json = hasFlag (args, "--json");
@@ -295,8 +295,29 @@ public class CLI {
         JsonNode ich = client.currentUser ();
         besitzErgaenzen (root, ich);
         schreibrechtErgaenzen (root, ich);
-        printResult (root, new String[]{"id", "projektID", "name", "besitz", "schreiben"}, json);
+        String[] spalten = {"id", "projektID", "name", "besitz", "schreiben"};
+        // Auch im JSON-Modus nur diese Spalten. Die Extended-Sicht liefert je
+        // Kalender die komplette Rechtetabelle calendarAccesses mit — gemessen
+        // 41 KB fuer 18 Kalender. Fuer einen aufrufenden Dienst ist das
+        // Rauschen: besitz und schreiben sind daraus bereits berechnet, die
+        // Rohdaten kosten nur Kontext und verduennen die Aufmerksamkeit.
+        printResult (nurSpalten (root, spalten), spalten, json);
     }
+
+    /** Reduziert eine Trefferliste auf die angegebenen Felder. */
+    private static JsonNode nurSpalten (JsonNode root, String[] spalten) {
+        if (root == null || !root.isArray ())
+            return root;
+        ArrayNode out = MAPPER.createArrayNode ();
+        for (JsonNode k : root) {
+            ObjectNode schlank = MAPPER.createObjectNode ();
+            for (String s : spalten)
+                if (k.has (s))
+                    schlank.set (s, k.get (s));
+            out.add (schlank);
+            }
+        return out;
+        }
 
     /**
      * Traegt je Kalender ein, ob der angemeldete Benutzer hineinschreiben darf.

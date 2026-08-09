@@ -138,6 +138,15 @@ for kid, soll in erwartet.items ():
 # falsches "du darfst nicht".
 assert "schreiben" not in nach_id[7], nach_id[7]
 print ("  ok: schreiben ueber benutzerID; Suchtemplate bleibt offen")
+
+# Nur die fuenf Spalten -- calendarAccesses ist die interne Rechtetabelle und
+# machte 41 KB fuer 18 Kalender aus. besitz und schreiben sind daraus bereits
+# berechnet; die Rohdaten kosten einen aufrufenden Dienst nur Kontext.
+erlaubt = {"id", "projektID", "name", "besitz", "schreiben"}
+for k in json.loads (sys.argv[1])["data"]:
+    ueberzaehlig = set (k) - erlaubt
+    assert not ueberzaehlig, f"unerwartete Felder im JSON: {ueberzaehlig}"
+print ("  ok: JSON traegt nur die fuenf Spalten")
 PRUEF
 
 # ── Keine Gruppen-Abfragen: der Benutzer-Zweig braucht sie nicht ───────────
