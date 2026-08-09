@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
-# Prueft: kalender list zeigt id/projektID/name und traegt je Kalender ein,
-# WIE der angemeldete Benutzer zu ihm steht (besitz) und OB er hineinschreiben
-# darf (schreiben). Beides ist unabhaengig: ein fremder Kalender kann
-# beschreibbar sein, ein Kalender des eigenen Kreisverbands nur lesbar.
+# Prueft: kalender list zeigt id/projektID/name, dazu besitz (wem gehoert der
+# Kalender) und schreiben (darf ich hineinschreiben). Beides ist unabhaengig:
+# ein Kalender eines fremden Kreisverbands kann beschreibbar sein, einer des
+# eigenen nur lesbar.
+#
+# Massgeblich fuer "schreiben" ist CalendarService.accessibleCalenderWhereClause
+# im Hauptrepo. Dort gibt es zwei sich ausschliessende Zweige: fuer eine
+# PERSON-Sitzung zaehlen personID und Gruppen, fuer eine BENUTZER-Sitzung
+# ausschliesslich CalendarAccess.benutzerID (plus Suchtemplates). Die CLI
+# arbeitet immer mit einer Benutzer-Sitzung.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 source test/lib/portable.sh
@@ -23,32 +29,33 @@ BENUTZER=/tmp/cli-kalender-user.json
 echo '{"id":7,"personID":70,"projektID":42,"login":"testuser"}' > "$BENUTZER"
 
 PORT=58822
-python3 - "$PORT" "$MITSCHRIFT" "$BENUTZER" <<'PY' &
+python3 - "$PORT" "$MITSCHRIFT" "$BENUTZER" <<'SERVER' &
 import sys, json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 port, mitschrift, benutzerdatei = int (sys.argv[1]), sys.argv[2], sys.argv[3]
 
+def zugriff (benutzerID=-1, personID=-1, gruppeID=-1, template=-1, schreiben=False):
+    return {"benutzerID": benutzerID, "personID": personID, "gruppeID": gruppeID,
+            "tagSearchTemplateID": template, "writeAccess": schreiben}
+
 # calendarAccesses stammen aus der Extended-Sicht (Calendar.getCalendarAccesses).
 KALENDER = [
-    {"id": 1, "projektID": 42, "benutzerID": 7,  "personID": -1, "name": "Mein Kalender",
-     "calendarAccesses": []},                                        # Besitzer (benutzerID)
-    {"id": 2, "projektID": 42, "benutzerID": -1, "personID": 70, "name": "Meine Person",
-     "calendarAccesses": []},                                        # Besitzer (personID)
+    {"id": 1, "projektID": 42, "benutzerID": 7,  "personID": -1, "name": "MeinKalender",
+     "calendarAccesses": []},
+    {"id": 2, "projektID": 42, "benutzerID": -1, "personID": 70, "name": "MeinePerson",
+     "calendarAccesses": []},
     {"id": 3, "projektID": 42, "benutzerID": 99, "personID": -1, "name": "NurLesen",
-     "calendarAccesses": [{"benutzerID": 7, "personID": -1, "gruppeID": -1, "writeAccess": False}]},
+     "calendarAccesses": [zugriff (benutzerID=7, schreiben=False)]},
     {"id": 4, "projektID": 88, "benutzerID": 99, "personID": -1, "name": "Nachbarverband",
-     "calendarAccesses": [{"benutzerID": -1, "personID": 70, "gruppeID": -1, "writeAccess": True}]},
-    {"id": 5, "projektID": 42, "benutzerID": 99, "personID": -1, "name": "UeberGruppe",
-     "calendarAccesses": [{"benutzerID": -1, "personID": -1, "gruppeID": 500, "writeAccess": True}]},
-    {"id": 6, "projektID": 42, "benutzerID": 99, "personID": -1, "name": "FremdeGruppe",
-     "calendarAccesses": [{"benutzerID": -1, "personID": -1, "gruppeID": 600, "writeAccess": True}]},
-    {"id": 7, "projektID": 42, "benutzerID": 99, "personID": -1, "name": "GruppeNurLesend",
-     "calendarAccesses": [{"benutzerID": -1, "personID": -1, "gruppeID": 700, "writeAccess": False}]},
+     "calendarAccesses": [zugriff (benutzerID=7, schreiben=True)]},
+    {"id": 5, "projektID": 42, "benutzerID": 99, "personID": -1, "name": "NurGruppe",
+     "calendarAccesses": [zugriff (gruppeID=500, schreiben=True)]},
+    {"id": 6, "projektID": 42, "benutzerID": 99, "personID": -1, "name": "FremderBenutzer",
+     "calendarAccesses": [zugriff (benutzerID=99, schreiben=True)]},
+    {"id": 7, "projektID": 42, "benutzerID": 99, "personID": -1, "name": "UeberTemplate",
+     "calendarAccesses": [zugriff (template=12, schreiben=True)]},
 ]
-
-# Mitglieder je Gruppe. 500 enthaelt mich (Person 70), 600 nicht.
-GRUPPEN = {"500": [{"id": 70}, {"id": 71}], "600": [{"id": 71}], "700": [{"id": 70}]}
 
 class H (BaseHTTPRequestHandler):
     def do_GET (self):
@@ -57,9 +64,6 @@ class H (BaseHTTPRequestHandler):
         if self.path.startswith ("/backend/rest/current-user"):
             with open (benutzerdatei) as f:
                 roh = f.read ().strip ().encode ()
-        elif "/PersonIds" in self.path:
-            gid = self.path.split ("/Gruppe/")[1].split ("/")[0]
-            roh = json.dumps (GRUPPEN.get (gid, [])).encode ()
         else:
             roh = json.dumps ({"success": True, "total": len (KALENDER),
                                "root": KALENDER}).encode ()
@@ -71,7 +75,7 @@ class H (BaseHTTPRequestHandler):
     def log_message (self, *a): pass
 
 HTTPServer (("127.0.0.1", port), H).serve_forever ()
-PY
+SERVER
 SERVER_PID=$!
 trap 'kill $SERVER_PID 2>/dev/null' EXIT
 for i in $(seq 1 40); do curl -sf "http://127.0.0.1:$PORT/ping" >/dev/null 2>&1 && break; sleep 0.1; done
@@ -86,7 +90,7 @@ fail=0
 : > "$MITSCHRIFT"
 out="$(run --json kalender list --kvid 42 2>&1)"
 
-MSYS_NO_PATHCONV=1 python3 - "$(grep -v -e current-user -e PersonIds "$MITSCHRIFT" | head -1)" "$out" <<'PY' || fail=1
+MSYS_NO_PATHCONV=1 python3 - "$(grep -v current-user "$MITSCHRIFT" | head -1)" "$out" <<'PRUEF' || fail=1
 import sys, json, urllib.parse
 pfad, out = sys.argv[1], sys.argv[2]
 assert "/backend/rest/store/Calendar/view/Extended" in pfad, pfad
@@ -97,12 +101,10 @@ assert eigenschaften["projektID"].get ("exact") is True, eigenschaften
 d = json.loads (out)
 assert d["ok"] is True and d["count"] == 7, d
 print ("  ok: kalender list filtert ueber projektID")
-PY
+PRUEF
 
 # ── besitz: wem der Kalender gehoert ────────────────────────────────────────
-#    "eigen" schlaegt "eigener_kv": ein eigener Kalender liegt fast immer auch
-#    im eigenen Kreisverband, und die genauere Aussage ist die nuetzlichere.
-MSYS_NO_PATHCONV=1 python3 - "$out" <<'PY' || fail=1
+MSYS_NO_PATHCONV=1 python3 - "$out" <<'PRUEF' || fail=1
 import sys, json
 nach_id = {k["id"]: k for k in json.loads (sys.argv[1])["data"]}
 erwartet = {1: "eigen", 2: "eigen", 3: "eigener_kv", 4: "fremder_kv",
@@ -111,42 +113,40 @@ for kid, soll in erwartet.items ():
     ist = nach_id[kid].get ("besitz")
     assert ist == soll, f"Kalender {kid}: besitz erwartet {soll}, bekam {ist}"
 print ("  ok: besitz eigen / eigener_kv / fremder_kv")
-PY
+PRUEF
 
-# ── schreiben: Besitz, direkte Freigabe und Gruppenweg ──────────────────────
-#    Das ist die eigentliche Frage: nicht "wem gehoert der Kalender", sondern
-#    "wo darf ich hineinschreiben". Kalender 4 zeigt, dass beides auseinander
-#    faellt — fremder Verband, aber beschreibbar.
-MSYS_NO_PATHCONV=1 python3 - "$out" <<'PY' || fail=1
+# ── schreiben: allein ueber CalendarAccess.benutzerID ───────────────────────
+#    Kalender 4 ist der Kern: fremder Kreisverband, aber beschreibbar. Besitz
+#    und Schreibrecht fallen auseinander.
+MSYS_NO_PATHCONV=1 python3 - "$out" <<'PRUEF' || fail=1
 import sys, json
 nach_id = {k["id"]: k for k in json.loads (sys.argv[1])["data"]}
 erwartet = {
-    1: True,   # Besitzer ueber benutzerID
-    2: True,   # Besitzer ueber personID
-    3: False,  # direkte Freigabe, aber writeAccess=false
-    4: True,   # direkte Freigabe an meine Person, writeAccess=true
-    5: True,   # ueber Gruppe 500, in der ich bin
-    6: False,  # ueber Gruppe 600, in der ich NICHT bin
-    7: False,  # Gruppe 700 gewaehrt nur Leserecht
+    1: True,   # Besitzer (Calendar.benutzerID)
+    2: False,  # Besitz ueber personID zaehlt im Benutzer-Zweig nicht
+    3: False,  # Freigabe an mich, aber writeAccess=false
+    4: True,   # Freigabe an mich mit writeAccess=true -- fremder KV!
+    5: False,  # nur Gruppen-Freigabe -> im Benutzer-Zweig ohne Wirkung
+    6: False,  # Freigabe an einen anderen Benutzer
 }
 for kid, soll in erwartet.items ():
     ist = nach_id[kid].get ("schreiben")
     assert ist == soll, f"Kalender {kid}: schreiben erwartet {soll}, bekam {ist}"
-print ("  ok: schreiben ueber Besitz, Freigabe und Gruppe")
-PY
 
-# ── Nur schreibende Gruppen werden befragt, jede genau einmal ───────────────
-#    Gruppe 700 gewaehrt nur Leserecht — sie zu befragen waere ein Aufruf ohne
-#    Erkenntnis. Und eine Gruppe zweimal zu fragen ebenfalls.
-MSYS_NO_PATHCONV=1 python3 - "$MITSCHRIFT" <<'PY' || fail=1
-import sys, re, collections
-zaehler = collections.Counter (
-    m.group (1) for z in open (sys.argv[1])
-    for m in [re.search (r"/Gruppe/(\d+)/PersonIds", z)] if m)
-assert set (zaehler) == {"500", "600"}, f"befragt: {dict (zaehler)} (700 gewaehrt nur Leserecht)"
-assert all (n == 1 for n in zaehler.values ()), dict (zaehler)
-print ("  ok: nur schreibende Gruppen befragt, je einmal")
-PY
+# Suchtemplate: ob es auf mich zutrifft, steht in einer Server-Cache-Tabelle,
+# die von aussen nicht abfragbar ist. Dann lieber KEINE Angabe als ein
+# falsches "du darfst nicht".
+assert "schreiben" not in nach_id[7], nach_id[7]
+print ("  ok: schreiben ueber benutzerID; Suchtemplate bleibt offen")
+PRUEF
+
+# ── Keine Gruppen-Abfragen: der Benutzer-Zweig braucht sie nicht ───────────
+MSYS_NO_PATHCONV=1 python3 - "$MITSCHRIFT" <<'PRUEF' || fail=1
+import sys
+assert "/PersonIds" not in open (sys.argv[1]).read (), \
+    "Gruppen duerfen fuer eine Benutzer-Sitzung nicht abgefragt werden"
+print ("  ok: keine ueberfluessigen Gruppen-Abfragen")
+PRUEF
 
 # ── current-user wird genau EINMAL geholt, nicht je Zeile ───────────────────
 anzahl="$(grep -c current-user "$MITSCHRIFT")"
@@ -156,30 +156,27 @@ else
   echo "  FAIL: current-user $anzahl-mal geholt, erwartet 1"; fail=1
 fi
 
-# ── Ohne ermittelbaren Benutzer wird nicht geraten ──────────────────────────
-#    "fremder_kv" auf Verdacht waere die schlechteste Antwort: bestimmt im Ton
-#    und moeglicherweise falsch. Beim Schreibrecht gilt dasselbe — es fehlt
-#    dann ganz, statt ein falsches "false" zu behaupten.
+# ── Ohne ermittelbaren Benutzer wird nichts behauptet ──────────────────────
 echo '{}' > "$BENUTZER"
 out="$(run --json kalender list --kvid 42 2>&1)"
-MSYS_NO_PATHCONV=1 python3 - "$out" <<'PY' || fail=1
+MSYS_NO_PATHCONV=1 python3 - "$out" <<'PRUEF' || fail=1
 import sys, json
 daten = json.loads (sys.argv[1])["data"]
 assert {k.get ("besitz") for k in daten} == {"unbekannt"}, daten
-assert all (k.get ("schreiben") is None for k in daten), daten
+assert all ("schreiben" not in k for k in daten), daten
 print ("  ok: ohne Benutzer -> unbekannt, kein geratenes Schreibrecht")
-PY
+PRUEF
 
 # ── Die Liste bleibt brauchbar, auch wenn current-user ganz ausfaellt ───────
 echo 'kein json' > "$BENUTZER"
 out="$(run --json kalender list --kvid 42 2>&1)"
-MSYS_NO_PATHCONV=1 python3 - "$out" <<'PY' || fail=1
+MSYS_NO_PATHCONV=1 python3 - "$out" <<'PRUEF' || fail=1
 import sys, json
 d = json.loads (sys.argv[1])
 assert d["ok"] is True and d["count"] == 7, d
 assert {k.get ("besitz") for k in d["data"]} == {"unbekannt"}, d["data"]
 print ("  ok: kaputtes current-user kippt die Auflistung nicht")
-PY
+PRUEF
 
 # ── Ohne --kvid kein Filter: alle zugaenglichen Kalender ───────────────────
 #    Der Server begrenzt ueber die Sitzung. Genau deshalb darf der Aufrufer
@@ -187,12 +184,12 @@ PY
 echo '{"id":7,"personID":70,"projektID":42,"login":"testuser"}' > "$BENUTZER"
 : > "$MITSCHRIFT"
 out="$(run --json kalender list 2>&1)"
-MSYS_NO_PATHCONV=1 python3 - "$(grep -v -e current-user -e PersonIds "$MITSCHRIFT" | head -1)" <<'PY' || fail=1
+MSYS_NO_PATHCONV=1 python3 - "$(grep -v current-user "$MITSCHRIFT" | head -1)" <<'PRUEF' || fail=1
 import sys, urllib.parse
 qs = urllib.parse.parse_qs (urllib.parse.urlparse (sys.argv[1]).query)
 assert "filter" not in qs or qs["filter"] == ["[]"], qs.get ("filter")
 print ("  ok: ohne --kvid wird nicht gefiltert")
-PY
+PRUEF
 
 out="$(run kalender list --kvid 42 2>&1)"
 case "$out" in

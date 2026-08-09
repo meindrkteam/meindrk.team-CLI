@@ -6,9 +6,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.Console;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -33,7 +30,7 @@ public class CLI {
     private static final ObjectMapper MAPPER = new ObjectMapper ();
 
     /** Muss beim Release mit dem Git-Tag uebereinstimmen. */
-    private static final String CLI_VERSION = "0.1.9";
+    private static final String CLI_VERSION = "0.1.10";
 
     public static void main (String[] args) throws Exception {
         boolean json = hasFlag (args, "--json");
@@ -297,7 +294,7 @@ public class CLI {
         JsonNode root = result.path ("root");
         JsonNode ich = client.currentUser ();
         besitzErgaenzen (root, ich);
-        schreibrechtErgaenzen (client, root, ich);
+        schreibrechtErgaenzen (root, ich);
         printResult (root, new String[]{"id", "projektID", "name", "besitz", "schreiben"}, json);
     }
 
@@ -309,64 +306,49 @@ public class CLI {
      * will, braucht diese Angabe — sonst erfaehrt er es erst, wenn der Server
      * das Anlegen ablehnt.
      *
-     * <p>Ohne ermittelbaren Benutzer bleibt das Feld WEG statt auf false zu
-     * stehen. Ein falsches "du darfst nicht" ist schlimmer als keine Angabe:
-     * es entwertet beim ersten Gegenbeweis jede weitere Warnung.
+     * <p>Massgeblich ist CalendarService.accessibleCalenderWhereClause im
+     * Hauptrepo. Dort gibt es ZWEI sich ausschliessende Zweige: fuer eine
+     * PERSON-Sitzung zaehlen personID und Gruppen (ueber PersonGruppe), fuer
+     * eine BENUTZER-Sitzung dagegen ausschliesslich CalendarAccess.benutzerID
+     * (plus Suchtemplates). Die CLI arbeitet immer mit einer Benutzer-Sitzung —
+     * current-user liefert einen Benutzer —, also gilt hier der benutzerID-Weg.
+     * Gruppen sind fuer uns bedeutungslos und werden nicht abgefragt.
+     *
+     * <p>Das Feld bleibt WEG statt auf false zu stehen, wenn sich die Frage
+     * nicht beantworten laesst: ohne ermittelbaren Benutzer, oder wenn ein
+     * Schreibrecht ueber ein Suchtemplate vergeben ist (tagSearchTemplateID) —
+     * ob das auf mich zutrifft, steht in einer Server-Cache-Tabelle, die von
+     * aussen nicht abfragbar ist. Ein falsches "du darfst nicht" entwertet beim
+     * ersten Gegenbeweis jede weitere Warnung.
      */
-    private static void schreibrechtErgaenzen (RestClient client, JsonNode root, JsonNode ich) {
+    private static void schreibrechtErgaenzen (JsonNode root, JsonNode ich) {
         if (root == null || !root.isArray () || ich == null)
             return;
-        long meineID     = ich.path ("id").asLong (-1);
-        long meinePerson = ich.path ("personID").asLong (-1);
-
-        // Erst sammeln, welche Gruppen ueberhaupt Schreibrecht gewaehren, dann
-        // je Gruppe EINMAL fragen. Eine Gruppe, die nur Leserecht gibt, zu
-        // befragen waere ein Aufruf ohne Erkenntnis.
-        Set<Long> zuPruefen = new LinkedHashSet<> ();
+        long meineID = ich.path ("id").asLong (-1);
+        if (meineID <= 0)
+            return;
         for (JsonNode k : root)
-            for (JsonNode a : k.path ("calendarAccesses"))
-                if (a.path ("writeAccess").asBoolean (false)) {
-                    long g = a.path ("gruppeID").asLong (-1);
-                    if (g > 0)
-                        zuPruefen.add (g);
-                    }
-
-        Set<Long> meineGruppen = new HashSet<> ();
-        for (Long g : zuPruefen) {
-            JsonNode personen = client.gruppePersonIds (g);
-            if (personen == null || !personen.isArray ())
-                continue;                       // Ausfall -> Gruppe zaehlt nicht
-            for (JsonNode p : personen)
-                if (meinePerson > 0 && p.path ("id").asLong (-1) == meinePerson) {
-                    meineGruppen.add (g);
-                    break;
-                    }
-            }
-
-        for (JsonNode k : root)
-            if (k instanceof ObjectNode o)
-                o.put ("schreiben", darfSchreiben (o, meineID, meinePerson, meineGruppen));
+            if (k instanceof ObjectNode o) {
+                Boolean darf = darfSchreiben (o, meineID);
+                if (darf != null)
+                    o.put ("schreiben", darf.booleanValue ());
+                }
         }
 
-    /** Besitzer duerfen immer; sonst zaehlt eine Freigabe mit writeAccess. */
-    private static boolean darfSchreiben (JsonNode kalender, long meineID, long meinePerson,
-                                          Set<Long> meineGruppen) {
-        if (meineID > 0 && kalender.path ("benutzerID").asLong (-1) == meineID)
-            return true;
-        if (meinePerson > 0 && kalender.path ("personID").asLong (-1) == meinePerson)
-            return true;
+    /** true | false | null (nicht entscheidbar, siehe Suchtemplates oben). */
+    private static Boolean darfSchreiben (JsonNode kalender, long meineID) {
+        if (kalender.path ("benutzerID").asLong (-1) == meineID)
+            return Boolean.TRUE;                       // Besitzer duerfen immer
+        boolean ueberTemplate = false;
         for (JsonNode a : kalender.path ("calendarAccesses")) {
             if (!a.path ("writeAccess").asBoolean (false))
                 continue;
-            if (meineID > 0 && a.path ("benutzerID").asLong (-1) == meineID)
-                return true;
-            if (meinePerson > 0 && a.path ("personID").asLong (-1) == meinePerson)
-                return true;
-            long g = a.path ("gruppeID").asLong (-1);
-            if (g > 0 && meineGruppen.contains (g))
-                return true;
+            if (a.path ("benutzerID").asLong (-1) == meineID)
+                return Boolean.TRUE;
+            if (a.path ("tagSearchTemplateID").asLong (-1) > 0)
+                ueberTemplate = true;
             }
-        return false;
+        return ueberTemplate ? null : Boolean.FALSE;
         }
 
     /**
