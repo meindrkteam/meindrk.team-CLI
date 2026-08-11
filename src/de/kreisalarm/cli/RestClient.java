@@ -138,6 +138,43 @@ public class RestClient {
         return aktuellerBenutzer;
     }
 
+        /** Grenze eines multipart-Koerpers. Zufaellig je Anfrage, damit sie nicht
+         *  zufaellig im JSON vorkommt (etwa in einem Termin-Namen). */
+        private static String neueGrenze () {
+            byte[] b = new byte[16];
+            new java.security.SecureRandom ().nextBytes (b);
+            StringBuilder sb = new StringBuilder ("----meindrkCli");
+            for (byte x : b) sb.append (String.format ("%02x", x));
+            return sb.toString ();
+        }
+    
+        /** Verpackt das Objekt als multipart/form-data mit dem einen Feld {@code json}.
+         *
+         *  <p>Warum nicht einfach ein JSON-Body: Die schreibenden Endpunkte des
+         *  Backends nehmen ihre Daten NICHT aus dem Koerper. Sie sind fuer das
+         *  Web-Frontend gebaut, das Termin und Dateianhaenge in einem Rutsch
+         *  schickt, und lesen deshalb {@code @PartsParam("files")} plus
+         *  {@code @QueryParam("json")} — letzteres ueber
+         *  {@code request.getParameter("json")}, also aus Query-String oder
+         *  Formularfeldern, nie aus einem JSON-Body.
+         *
+         *  <p>Schlimmer noch: {@code RestServlet} ruft fuer {@code @PartsParam}
+         *  ungeprueft {@code request.getParts()} auf (RestServlet.java:778). Bei
+         *  {@code Content-Type: application/json} wirft Jetty dort
+         *  {@code BadMessageException: 400: bad multipart} — der Aufruf scheitert,
+         *  bevor irgendein Parameter gelesen wird. Genau das war am 2026-08-11 der
+         *  Fehler 1155261 bei {@code termin create}. */
+        private HttpRequest.BodyPublisher multipartJson (ObjectNode body, String grenze) {
+            String kopf = "--" + grenze + "\r\n"
+                + "Content-Disposition: form-data; name=\"json\"\r\n"
+                + "Content-Type: application/json; charset=UTF-8\r\n\r\n";
+            String fuss = "\r\n--" + grenze + "--\r\n";
+            return HttpRequest.BodyPublishers.ofByteArray (
+                (kopf + body.toString () + fuss).getBytes (StandardCharsets.UTF_8));
+        }
+    
+        /** POST auf einen schreibenden Endpunkt. Siehe {@link #multipartJson}: der
+         *  Koerper ist multipart mit dem Feld {@code json}, nicht rohes JSON. */
     public JsonNode post (String path, ObjectNode body) throws Exception {
         HttpRequest req = HttpRequest.newBuilder ()
             .uri (URI.create (config.getUrl () + path))
@@ -153,12 +190,13 @@ public class RestClient {
     }
 
     public JsonNode put (String path, ObjectNode body) throws Exception {
-        HttpRequest req = HttpRequest.newBuilder ()
-            .uri (URI.create (config.getUrl () + path))
-            .header ("Cookie", "JSESSIONID=" + config.getSession ())
-            .header ("Content-Type", "application/json")
-            .PUT (HttpRequest.BodyPublishers.ofString (body.toString (), StandardCharsets.UTF_8))
-            .build ();
+    	String grenze = neueGrenze ();
+    	HttpRequest req = HttpRequest.newBuilder ()
+                .uri (URI.create (config.getUrl () + path))
+                .header ("Cookie", "JSESSIONID=" + config.getSession ())
+                .header ("Content-Type", "multipart/form-data; boundary=" + grenze)
+                .PUT (multipartJson (body, grenze))
+                .build ();
         HttpResponse<String> resp = http.send (req, HttpResponse.BodyHandlers.ofString ());
         requireOk (resp);
         JsonNode result = MAPPER.readTree (resp.body ());
