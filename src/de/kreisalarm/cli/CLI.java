@@ -30,7 +30,7 @@ public class CLI {
     private static final ObjectMapper MAPPER = new ObjectMapper ();
 
     /** Muss beim Release mit dem Git-Tag uebereinstimmen. */
-    private static final String CLI_VERSION = "0.1.11";
+    private static final String CLI_VERSION = "0.1.12";
 
     public static void main (String[] args) throws Exception {
         boolean json = hasFlag (args, "--json");
