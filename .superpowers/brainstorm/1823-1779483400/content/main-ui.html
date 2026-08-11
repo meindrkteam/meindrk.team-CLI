@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+* { box-sizing: border-box; margin:0; padding:0; }
+body { font-family: sans-serif; background:#f0f2f5; min-height:100vh; }
+.topbar { background:#cc0000; color:#fff; padding:8px 20px; display:flex; align-items:center; gap:12px; }
+.topbar img { height:28px; filter: brightness(0) invert(1); }
+.topbar .spacer { flex:1; }
+.topbar .user { font-size:12px; opacity:.9; }
+.topbar .kv { font-size:11px; background:rgba(255,255,255,.2); border-radius:3px; padding:2px 8px; }
+.topbar .logout { font-size:11px; background:transparent; border:1px solid rgba(255,255,255,.5); color:#fff; border-radius:3px; padding:3px 10px; cursor:pointer; }
+.main { padding:20px; }
+.card { background:#fff; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.1); padding:16px 18px; margin-bottom:16px; }
+.toolbar { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+.toolbar label { display:block; font-size:11px; color:#6c757d; margin-bottom:3px; }
+.toolbar select, .toolbar input { border:1px solid #ced4da; border-radius:4px; padding:5px 9px; font-size:13px; background:#fff; }
+.toolbar select.cmd { font-weight:bold; color:#cc0000; border-color:#cc0000; }
+.toolbar .btn { background:#cc0000; color:#fff; border:none; border-radius:4px; padding:6px 18px; font-size:13px; font-weight:bold; cursor:pointer; white-space:nowrap; }
+.toolbar .btn:hover { background:#aa0000; }
+.results-header { font-size:11px; color:#6c757d; margin-bottom:8px; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th { background:#f8f9fa; border-bottom:2px solid #dee2e6; text-align:left; padding:7px 10px; font-size:11px; color:#495057; font-weight:600; white-space:nowrap; }
+td { border-bottom:1px solid #f0f0f0; padding:6px 10px; color:#212529; }
+tr:hover td { background:#fff8f8; }
+.badge { display:inline-block; padding:1px 7px; border-radius:10px; font-size:10px; }
+.badge-green { background:#d1e7dd; color:#0a3622; }
+.badge-grey { background:#e9ecef; color:#495057; }
+.page-note { font-size:11px; color:#adb5bd; text-align:right; margin-top:8px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiAkJCQvR2VuZXJhbFN0ci8xOTY9QWRvYmUgSWxsdXN0cmF0b3IgMjcuNi4wLCBTVkcgRXhwb3J0IFBsdWctSW4gLiBTVkcgVmVyc2lvbjogNi4wMCBCdWlsZCAwKSAgLS0+DQo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNiAzNC44IiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAyMi42IDM0Ljg7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4NCjxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+DQoJLnN0MHtmaWxsOiNFMzBBMTU7fQ0KCS5zdDF7ZmlsbDojRTMwQzEzO30NCjwvc3R5bGU+DQo8cGF0aCBpZD0iWE1MSURfNjJfIiBkPSJNNSwxOS41di04YzAsMCwwLTAuNCwwLjItMC44SDEuOGMwLDAtMS42LDAtMS42LDEuNnY1LjZjMCwxLjYsMS42LDEuNiwxLjYsMS42djhoNC44di02LjQNCglDNi42LDIxLjEsNSwyMS4xLDUsMTkuNUw1LDE5LjV6IE01LDE5LjUiLz4NCjxwYXRoIGlkPSJYTUxJRF81OV8iIGQ9Ik01LDkuOWMwLjQsMCwwLjgtMC4xLDEuMS0wLjNjMCwwLDAuMS0wLjEsMC4yLTAuMWMwLjctMC40LDEuMS0xLjIsMS4xLTJjMC0xLjMtMS4xLTIuNC0yLjQtMi40DQoJYy0xLjMsMC0yLjQsMS4xLTIuNCwyLjRDMi42LDguOCwzLjYsOS45LDUsOS45TDUsOS45eiBNNSw5LjkiLz4NCjxwYXRoIGlkPSJYTUxJRF81Nl8iIGQ9Ik0yMSwxMC43aC0zLjRjMC4yLDAuNCwwLjIsMC44LDAuMiwwLjh2OGMwLDEuNi0xLjYsMS42LTEuNiwxLjZ2Ni40SDIxdi04YzAsMCwxLjYsMCwxLjYtMS42di01LjYNCglDMjIuNiwxMi4zLDIyLjYsMTAuNywyMSwxMC43TDIxLDEwLjd6IE0yMSwxMC43Ii8+DQo8cGF0aCBpZD0iWE1MSURfNTNfIiBkPSJNMTYuNSw5LjVjMC4xLDAsMC4xLDAuMSwwLjIsMC4xYzAuMywwLjIsMC43LDAuMywxLjEsMC4zYzEuMywwLDIuNC0xLjEsMi40LTIuNGMwLTEuMy0xLjEtMi40LTIuNC0yLjQNCgljLTEuMywwLTIuNCwxLjEtMi40LDIuNEMxNS40LDguMywxNS44LDksMTYuNSw5LjVMMTYuNSw5LjV6IE0xNi41LDkuNSIvPg0KPHBhdGggaWQ9IlhNTElEXzUwXyIgY2xhc3M9InN0MCIgZD0iTTEzLjgsNy41YzAsMS4zLTEuMSwyLjQtMi40LDIuNEMxMCw5LjksOSw4LjgsOSw3LjVjMC0xLjMsMS4xLTIuNCwyLjQtMi40DQoJQzEyLjcsNS4xLDEzLjgsNi4xLDEzLjgsNy41TDEzLjgsNy41eiBNMTMuOCw3LjUiLz4NCjxwYXRoIGlkPSJYTUxJRF80N18iIGNsYXNzPSJzdDAiIGQ9Ik0xNi4yLDEyLjNjMCwwLDAtMS42LTEuNi0xLjZIOC4yYzAsMC0xLjYsMC0xLjYsMS42djUuNmMwLDEuNiwxLjYsMS42LDEuNiwxLjZ2OGg2LjR2LTgNCgljMCwwLDEuNiwwLDEuNi0xLjZWMTIuM3ogTTE2LjIsMTIuMyIvPg0KPGcgaWQ9IlhNTElEXzM4XyI+DQoJPHBhdGggaWQ9IlhNTElEXzM5XyIgZD0iTTMuOSwyOUg2YzAuNSwwLDAuOCwwLDEuMSwwLjFjMC4zLDAuMSwwLjYsMC4zLDAuOSwwLjVzMC40LDAuNiwwLjUsMC45czAuMiwwLjgsMC4yLDEuNA0KCQljMCwwLjUtMC4xLDAuOS0wLjIsMS4yYy0wLjEsMC40LTAuMywwLjgtMC42LDFjLTAuMiwwLjItMC41LDAuMy0wLjgsMC41Yy0wLjMsMC4xLTAuNiwwLjEtMSwwLjFIMy45VjI5eiBNNS4xLDMwdjMuOGgwLjkNCgkJYzAuMywwLDAuNiwwLDAuNy0wLjFjMC4yLDAsMC4zLTAuMSwwLjUtMC4yczAuMi0wLjMsMC4zLTAuNnMwLjEtMC42LDAuMS0xczAtMC44LTAuMS0xcy0wLjItMC40LTAuMy0wLjZTNi44LDMwLjEsNi42LDMwDQoJCUM2LjQsMzAsNi4xLDMwLDUuNiwzMEg1LjF6Ii8+DQoJPHBhdGggaWQ9IlhNTElEXzQyXyIgZD0iTTkuNywzNC44VjI5aDIuNGMwLjYsMCwxLjEsMC4xLDEuMywwLjJzMC41LDAuMywwLjcsMC41czAuMiwwLjYsMC4yLDAuOWMwLDAuNC0wLjEsMC44LTAuNCwxLjENCgkJcy0wLjYsMC41LTEuMSwwLjVjMC4yLDAuMSwwLjUsMC4zLDAuNiwwLjVzMC40LDAuNSwwLjcsMC45bDAuNywxLjFoLTEuNGwtMC44LTEuMmMtMC4zLTAuNC0wLjUtMC43LTAuNi0wLjhzLTAuMi0wLjItMC4zLTAuMg0KCQlzLTAuMy0wLjEtMC42LTAuMWgtMC4ydjIuNEg5Ljd6IE0xMC45LDMxLjRoMC45YzAuNiwwLDAuOSwwLDEtMC4xczAuMi0wLjEsMC4zLTAuMnMwLjEtMC4zLDAuMS0wLjRjMC0wLjItMC4xLTAuMy0wLjItMC41DQoJCVMxMi44LDMwLDEyLjYsMzBjLTAuMSwwLTAuNCwwLTAuOCwwaC0wLjlWMzEuNHoiLz4NCgk8cGF0aCBpZD0iWE1MSURfNjVfIiBkPSJNMTUuNSwzNC44VjI5aDEuMnYyLjVMMTksMjloMS42bC0yLjIsMi4ybDIuMywzLjVoLTEuNWwtMS42LTIuN2wtMC45LDF2MS43SDE1LjV6Ii8+DQo8L2c+DQo8ZyBpZD0iWE1MSURfMjdfIj4NCgk8cGF0aCBpZD0iWE1MSURfMjhfIiBjbGFzcz0ic3QxIiBkPSJNNy4zLDMuN2MwLDAuMS0wLjEsMC4yLTAuMiwwLjJjLTAuMiwwLTAuMy0wLjEtMC4zLTAuNGMwLTAuNCwwLTAuNywwLjEtMQ0KCQljMC0wLjIsMC4xLTAuNCwwLjEtMC42YzAtMC4xLDAtMC4xLDAtMC4xUzcsMS43LDcuMSwxLjdjMC4yLDAsMC4zLDAuMSwwLjMsMC40YzAsMC4xLDAsMC4zLTAuMSwwLjZjMCwwLjItMC4xLDAuMy0wLjEsMC40DQoJCWMwLjQtMC44LDAuNy0xLjIsMS0xLjJjMC4xLDAsMC4yLDAsMC4zLDAuMXMwLjEsMC4zLDAuMSwwLjZjMCwwLjMsMCwwLjUsMCwwLjVjMCwwLDAuMS0wLjEsMC4yLTAuNEM5LjEsMi4zLDkuMiwyLjEsOS4zLDINCgkJczAuMi0wLjIsMC4zLTAuMkM5LjgsMS44LDkuOSwxLjksMTAsMnMwLjEsMC4zLDAuMSwwLjZjMCwwLjIsMCwwLjQsMC4xLDAuNXMwLjEsMC4yLDAuMiwwLjJjMC4xLDAsMC4xLDAuMSwwLjEsMC4xDQoJCWMwLDAuMSwwLDAuMS0wLjEsMC4ycy0wLjEsMC4xLTAuMiwwLjFjLTAuMSwwLTAuMi0wLjEtMC4zLTAuMlM5LjcsMy4yLDkuNywyLjhjMC0wLjIsMC0wLjMsMC0wLjRzMC0wLjEtMC4xLTAuMWMwLDAtMC4xLDAtMC4xLDAuMQ0KCQlTOS4zLDIuOCw5LjIsMy4xQzksMy4zLDguOSwzLjUsOC44LDMuNlM4LjcsMy43LDguNiwzLjdjLTAuMSwwLTAuMiwwLTAuMi0wLjFTOC4yLDMuMyw4LjIsMi45YzAtMC40LDAtMC41LTAuMS0wLjUNCgkJQzguMSwyLjQsOCwyLjUsNy44LDIuOVM3LjQsMy41LDcuMywzLjd6Ii8+DQoJPHBhdGggaWQ9IlhNTElEXzMwXyIgY2xhc3M9InN0MSIgZD0iTTEyLjUsMy4yYzAsMC4xLTAuMSwwLjMtMC4zLDAuNXMtMC41LDAuMy0wLjgsMC4zYy0wLjIsMC0wLjQtMC4xLTAuNS0wLjJzLTAuMi0wLjMtMC4yLTAuNg0KCQljMC0wLjQsMC4xLTAuNywwLjQtMXMwLjUtMC41LDAuOC0wLjVjMC4xLDAsMC4zLDAsMC40LDAuMXMwLjEsMC4yLDAuMSwwLjNjMCwwLjItMC4xLDAuNC0wLjMsMC42cy0wLjUsMC4zLTAuOCwwLjQNCgkJYzAsMC0wLjEsMC0wLjEsMC4xYzAsMC4xLDAsMC4xLDAuMSwwLjJzMC4xLDAuMSwwLjIsMC4xYzAuMywwLDAuNS0wLjEsMC44LTAuNGMwLTAuMSwwLjEtMC4xLDAuMS0wLjFDMTIuNSwzLDEyLjUsMy4xLDEyLjUsMy4yeg0KCQkgTTExLjIsMi44YzAuMiwwLDAuNC0wLjEsMC41LTAuM1MxMiwyLjMsMTIsMi4yYzAsMCwwLTAuMSwwLTAuMXMtMC4xLDAtMC4xLDBjLTAuMSwwLTAuMiwwLjEtMC40LDAuMlMxMS4zLDIuNiwxMS4yLDIuOHoiLz4NCgk8cGF0aCBpZD0iWE1MSURfMzNfIiBjbGFzcz0ic3QxIiBkPSJNMTMsMi42TDEzLDIuNkMxMywyLjMsMTMsMi4yLDEzLDIuMmMwLTAuMSwwLTAuMiwwLjEtMC4yczAuMS0wLjEsMC4yLTAuMWMwLjEsMCwwLjIsMCwwLjIsMC4xDQoJCVMxMy42LDIsMTMuNiwyczAsMC4yLTAuMSwwLjNsMCwwYy0wLjEsMC4zLTAuMSwwLjUtMC4xLDAuNnMwLDAuMywwLDAuNGMwLDAuMSwwLDAuMiwwLDAuM2MwLDAsMCwwLDAsMC4xYzAsMCwwLDAuMS0wLjEsMC4xDQoJCVMxMy4yLDQsMTMuMSw0Yy0wLjIsMC0wLjMtMC4xLTAuMy0wLjRjMC0wLjIsMC0wLjUsMC4xLTAuOEMxMywyLjcsMTMsMi42LDEzLDIuNnogTTEzLjksMC45YzAsMC4xLDAsMC4yLTAuMSwwLjJzLTAuMiwwLjEtMC4yLDAuMQ0KCQljLTAuMSwwLTAuMSwwLTAuMi0wLjFTMTMuMywxLjEsMTMuMywxYzAtMC4xLDAtMC4yLDAuMS0wLjJzMC4xLTAuMSwwLjMtMC4xYzAuMSwwLDAuMiwwLDAuMiwwLjFTMTMuOSwwLjksMTMuOSwwLjl6Ii8+DQoJPHBhdGggaWQ9IlhNTElEXzM2XyIgY2xhc3M9InN0MSIgZD0iTTE1LjYsMy42Yy0wLjEtMC4xLTAuMS0wLjMtMC4xLTAuN2MwLTAuMy0wLjEtMC41LTAuMi0wLjVjLTAuMSwwLTAuMywwLjItMC41LDAuNQ0KCQlzLTAuNCwwLjYtMC40LDAuOGMwLDAsMCwwLjEtMC4xLDAuMXMtMC4xLDAtMC4xLDBjLTAuMiwwLTAuMy0wLjEtMC4zLTAuM2MwLTAuMSwwLTAuMiwwLjEtMC40YzAuMS0wLjMsMC4xLTAuNiwwLjEtMQ0KCQljMC0wLjEsMC0wLjEsMC4xLTAuMnMwLjEtMC4xLDAuMi0wLjFjMC4xLDAsMC4xLDAsMC4yLDAuMXMwLjEsMC4xLDAuMSwwLjNjMCwwLjEsMCwwLjQtMC4xLDAuN2MwLjMtMC43LDAuNi0xLDAuOS0xDQoJCWMwLjMsMCwwLjUsMC4yLDAuNSwwLjdDMTYsMy4xLDE2LDMuNCwxNi4xLDMuNGMwLDAsMC4xLDAsMC4xLDBjMCwwLDAuMSwwLDAuMSwwYzAuMSwwLDAuMSwwLDAuMSwwLjFjMCwwLjEsMCwwLjEtMC4xLDAuMg0KCQlTMTYuMSwzLjgsMTYsMy44QzE1LjgsMy44LDE1LjcsMy43LDE1LjYsMy42TDE1LjYsMy42eiIvPg0KPC9nPg0KPC9zdmc+DQo=" alt="meinDRK"/>
+  <div class="spacer"></div>
+  <span class="user">Max Muster</span>
+  <span class="kv">KV Musterstadt</span>
+  <button class="logout">Abmelden</button>
+</div>
+
+<div class="main">
+  <div class="card">
+    <div class="toolbar">
+      <div>
+        <label>Befehl</label>
+        <select class="cmd">
+          <option>person list</option>
+          <option>person get</option>
+          <option>gruppe list</option>
+          <option>benutzer list</option>
+          <option>projekt list</option>
+        </select>
+      </div>
+      <div>
+        <label>Kreisverband</label>
+        <select>
+          <option>KV Musterstadt (Standard)</option>
+          <option>KV Beispielkreis</option>
+          <option>Alle</option>
+        </select>
+      </div>
+      <div>
+        <label>Suche (--q)</label>
+        <input type="text" placeholder="Name, Vorname …" style="width:180px"/>
+      </div>
+      <div>
+        <label>Limit</label>
+        <input type="number" value="100" style="width:70px"/>
+      </div>
+      <button class="btn">▶ Ausführen</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="results-header">5 Ergebnisse · person list --q Müller --kvid 42 --limit 100</div>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nachname</th>
+          <th>Vorname</th>
+          <th>Geburtsdatum</th>
+          <th>Status</th>
+          <th>Aktiv</th>
+          <th>KV-ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1023</td><td>Müller</td><td>Hans</td><td>1985-03-12</td><td>vollmitglied</td><td><span class="badge badge-green">Ja</span></td><td>42</td></tr>
+        <tr><td>1047</td><td>Müller</td><td>Eva</td><td>1990-07-24</td><td>vollmitglied</td><td><span class="badge badge-green">Ja</span></td><td>42</td></tr>
+        <tr><td>1189</td><td>Müller</td><td>Klaus</td><td>1978-11-03</td><td>anwaerter</td><td><span class="badge badge-green">Ja</span></td><td>42</td></tr>
+        <tr><td>2034</td><td>Müller</td><td>Anna</td><td>1995-01-18</td><td>vollmitglied</td><td><span class="badge badge-grey">Nein</span></td><td>42</td></tr>
+        <tr><td>2201</td><td>Müller-Schmidt</td><td>Georg</td><td>1969-05-30</td><td>vollmitglied</td><td><span class="badge badge-green">Ja</span></td><td>42</td></tr>
+      </tbody>
+    </table>
+    <div class="page-note">Zeile anklicken → person get</div>
+  </div>
+</div>
+
+</body>
+</html>

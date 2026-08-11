@@ -1,0 +1,64 @@
+<h2>Login-Flow im Browser</h2>
+<p class="subtitle">Drei Stufen — jeweils was der Benutzer sieht</p>
+
+<div class="split" style="gap:16px;align-items:flex-start">
+
+  <div class="mockup" style="flex:1">
+    <div class="mockup-header">Schritt 1 — Noch nicht eingerichtet</div>
+    <div class="mockup-body" style="font-family:sans-serif;font-size:12px;padding:16px">
+      <div style="text-align:center;margin-bottom:16px;color:#6c757d;font-size:11px">⚙️ meinDRK CLI</div>
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:3px">Server-URL</label>
+        <input style="width:100%;box-sizing:border-box;border:1px solid #ced4da;border-radius:4px;padding:5px 8px;font-size:12px" placeholder="https://meinserver.kreisalarm.de"/>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:3px">Benutzername</label>
+        <input style="width:100%;box-sizing:border-box;border:1px solid #ced4da;border-radius:4px;padding:5px 8px;font-size:12px" placeholder="admin"/>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:3px">Kreisverband-ID (Standard)</label>
+        <input style="width:100%;box-sizing:border-box;border:1px solid #ced4da;border-radius:4px;padding:5px 8px;font-size:12px" placeholder="42"/>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:3px">Passwort</label>
+        <input type="password" style="width:100%;box-sizing:border-box;border:1px solid #ced4da;border-radius:4px;padding:5px 8px;font-size:12px" placeholder="••••••••"/>
+      </div>
+      <button style="width:100%;background:#0d6efd;color:#fff;border:none;border-radius:4px;padding:7px;font-size:12px;cursor:pointer">Einrichten &amp; Anmelden</button>
+    </div>
+  </div>
+
+  <div class="mockup" style="flex:1">
+    <div class="mockup-header">Schritt 2 — Eingerichtet, aber abgemeldet</div>
+    <div class="mockup-body" style="font-family:sans-serif;font-size:12px;padding:16px">
+      <div style="text-align:center;margin-bottom:8px;color:#6c757d;font-size:11px">⚙️ meinDRK CLI</div>
+      <div style="background:#f8f9fa;border-radius:4px;padding:8px;margin-bottom:12px;font-size:11px;color:#6c757d;text-align:center">
+        Server: <strong style="color:#212529">meinserver.kreisalarm.de</strong><br>
+        Login: <strong style="color:#212529">admin</strong>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:3px">Passwort</label>
+        <input type="password" style="width:100%;box-sizing:border-box;border:1px solid #ced4da;border-radius:4px;padding:5px 8px;font-size:12px" placeholder="••••••••"/>
+      </div>
+      <button style="width:100%;background:#0d6efd;color:#fff;border:none;border-radius:4px;padding:7px;font-size:12px;cursor:pointer;margin-bottom:6px">Anmelden</button>
+      <button style="width:100%;background:transparent;color:#6c757d;border:1px solid #ced4da;border-radius:4px;padding:5px;font-size:11px;cursor:pointer">⚙ Konfiguration ändern</button>
+    </div>
+  </div>
+
+  <div class="mockup" style="flex:1">
+    <div class="mockup-header">Schritt 2b — 2FA erforderlich</div>
+    <div class="mockup-body" style="font-family:sans-serif;font-size:12px;padding:16px">
+      <div style="text-align:center;margin-bottom:8px;color:#6c757d;font-size:11px">⚙️ meinDRK CLI</div>
+      <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:8px;margin-bottom:12px;font-size:11px;color:#856404;text-align:center">
+        🔐 Zwei-Faktor-Authentifizierung erforderlich
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:3px">Google Authenticator / E-Mail Code</label>
+        <input style="width:100%;box-sizing:border-box;border:1px solid #ffc107;border-radius:4px;padding:5px 8px;font-size:14px;text-align:center;letter-spacing:4px;font-family:monospace" placeholder="123456" maxlength="6"/>
+      </div>
+      <button style="width:100%;background:#0d6efd;color:#fff;border:none;border-radius:4px;padding:7px;font-size:12px;cursor:pointer">Code bestätigen</button>
+    </div>
+  </div>
+
+</div>
+
+<p style="text-align:center;font-size:11px;color:#6c757d;margin-top:16px">Nach erfolgreichem Login → Hauptoberfläche. Session wird in ~/.meindrk-cli.properties gespeichert.</p>

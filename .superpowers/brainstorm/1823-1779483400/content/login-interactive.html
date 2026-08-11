@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+body { font-family: sans-serif; background: #f0f2f5; display:flex; justify-content:center; align-items:flex-start; padding: 40px 20px; margin:0; min-height:100vh; box-sizing:border-box; }
+.card { background:#fff; border-radius:10px; box-shadow:0 2px 12px rgba(0,0,0,.12); padding:28px 28px 24px; width:340px; }
+.logo { text-align:center; margin-bottom:20px; }
+.logo img { height:52px; max-width:200px; object-fit:contain; }
+label { display:block; font-size:11px; color:#6c757d; margin-bottom:3px; margin-top:10px; }
+input, select { width:100%; box-sizing:border-box; border:1px solid #ced4da; border-radius:5px; padding:6px 9px; font-size:13px; }
+input:focus, select:focus { outline:none; border-color:#cc0000; box-shadow: 0 0 0 2px rgba(204,0,0,.15); }
+.url-bar { background:#f8f9fa; border:1px solid #dee2e6; border-radius:5px; padding:6px 10px; display:flex; align-items:center; justify-content:space-between; margin-top:0; cursor:pointer; }
+.url-bar span { font-size:12px; color:#495057; }
+.url-bar a { font-size:11px; color:#0d6efd; text-decoration:none; white-space:nowrap; }
+.url-expanded { display:none; border:1px solid #0d6efd; border-radius:5px; padding:8px 10px; background:#f0f7ff; margin-top:6px; }
+.url-expanded.open { display:block; }
+.url-expanded input { border-color:#0d6efd; background:#fff; }
+.url-expanded .hint { font-size:10px; color:#6c757d; margin-top:3px; }
+.btn { width:100%; background:#cc0000; color:#fff; border:none; border-radius:5px; padding:9px; font-size:13px; font-weight:bold; cursor:pointer; margin-top:16px; }
+.btn:hover { background:#aa0000; }
+select optgroup { font-style:normal; font-weight:bold; color:#495057; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiAkJCQvR2VuZXJhbFN0ci8xOTY9QWRvYmUgSWxsdXN0cmF0b3IgMjcuNi4wLCBTVkcgRXhwb3J0IFBsdWctSW4gLiBTVkcgVmVyc2lvbjogNi4wMCBCdWlsZCAwKSAgLS0+DQo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgMjIuNiAzNC44IiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAyMi42IDM0Ljg7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4NCjxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+DQoJLnN0MHtmaWxsOiNFMzBBMTU7fQ0KCS5zdDF7ZmlsbDojRTMwQzEzO30NCjwvc3R5bGU+DQo8cGF0aCBpZD0iWE1MSURfNjJfIiBkPSJNNSwxOS41di04YzAsMCwwLTAuNCwwLjItMC44SDEuOGMwLDAtMS42LDAtMS42LDEuNnY1LjZjMCwxLjYsMS42LDEuNiwxLjYsMS42djhoNC44di02LjQNCglDNi42LDIxLjEsNSwyMS4xLDUsMTkuNUw1LDE5LjV6IE01LDE5LjUiLz4NCjxwYXRoIGlkPSJYTUxJRF81OV8iIGQ9Ik01LDkuOWMwLjQsMCwwLjgtMC4xLDEuMS0wLjNjMCwwLDAuMS0wLjEsMC4yLTAuMWMwLjctMC40LDEuMS0xLjIsMS4xLTJjMC0xLjMtMS4xLTIuNC0yLjQtMi40DQoJYy0xLjMsMC0yLjQsMS4xLTIuNCwyLjRDMi42LDguOCwzLjYsOS45LDUsOS45TDUsOS45eiBNNSw5LjkiLz4NCjxwYXRoIGlkPSJYTUxJRF81Nl8iIGQ9Ik0yMSwxMC43aC0zLjRjMC4yLDAuNCwwLjIsMC44LDAuMiwwLjh2OGMwLDEuNi0xLjYsMS42LTEuNiwxLjZ2Ni40SDIxdi04YzAsMCwxLjYsMCwxLjYtMS42di01LjYNCglDMjIuNiwxMi4zLDIyLjYsMTAuNywyMSwxMC43TDIxLDEwLjd6IE0yMSwxMC43Ii8+DQo8cGF0aCBpZD0iWE1MSURfNTNfIiBkPSJNMTYuNSw5LjVjMC4xLDAsMC4xLDAuMSwwLjIsMC4xYzAuMywwLjIsMC43LDAuMywxLjEsMC4zYzEuMywwLDIuNC0xLjEsMi40LTIuNGMwLTEuMy0xLjEtMi40LTIuNC0yLjQNCgljLTEuMywwLTIuNCwxLjEtMi40LDIuNEMxNS40LDguMywxNS44LDksMTYuNSw5LjVMMTYuNSw5LjV6IE0xNi41LDkuNSIvPg0KPHBhdGggaWQ9IlhNTElEXzUwXyIgY2xhc3M9InN0MCIgZD0iTTEzLjgsNy41YzAsMS4zLTEuMSwyLjQtMi40LDIuNEMxMCw5LjksOSw4LjgsOSw3LjVjMC0xLjMsMS4xLTIuNCwyLjQtMi40DQoJQzEyLjcsNS4xLDEzLjgsNi4xLDEzLjgsNy41TDEzLjgsNy41eiBNMTMuOCw3LjUiLz4NCjxwYXRoIGlkPSJYTUxJRF80N18iIGNsYXNzPSJzdDAiIGQ9Ik0xNi4yLDEyLjNjMCwwLDAtMS42LTEuNi0xLjZIOC4yYzAsMC0xLjYsMC0xLjYsMS42djUuNmMwLDEuNiwxLjYsMS42LDEuNiwxLjZ2OGg2LjR2LTgNCgljMCwwLDEuNiwwLDEuNi0xLjZWMTIuM3ogTTE2LjIsMTIuMyIvPg0KPGcgaWQ9IlhNTElEXzM4XyI+DQoJPHBhdGggaWQ9IlhNTElEXzM5XyIgZD0iTTMuOSwyOUg2YzAuNSwwLDAuOCwwLDEuMSwwLjFjMC4zLDAuMSwwLjYsMC4zLDAuOSwwLjVzMC40LDAuNiwwLjUsMC45czAuMiwwLjgsMC4yLDEuNA0KCQljMCwwLjUtMC4xLDAuOS0wLjIsMS4yYy0wLjEsMC40LTAuMywwLjgtMC42LDFjLTAuMiwwLjItMC41LDAuMy0wLjgsMC41Yy0wLjMsMC4xLTAuNiwwLjEtMSwwLjFIMy45VjI5eiBNNS4xLDMwdjMuOGgwLjkNCgkJYzAuMywwLDAuNiwwLDAuNy0wLjFjMC4yLDAsMC4zLTAuMSwwLjUtMC4yczAuMi0wLjMsMC4zLTAuNnMwLjEtMC42LDAuMS0xczAtMC44LTAuMS0xcy0wLjItMC40LTAuMy0wLjZTNi44LDMwLjEsNi42LDMwDQoJCUM2LjQsMzAsNi4xLDMwLDUuNiwzMEg1LjF6Ii8+DQoJPHBhdGggaWQ9IlhNTElEXzQyXyIgZD0iTTkuNywzNC44VjI5aDIuNGMwLjYsMCwxLjEsMC4xLDEuMywwLjJzMC41LDAuMywwLjcsMC41czAuMiwwLjYsMC4yLDAuOWMwLDAuNC0wLjEsMC44LTAuNCwxLjENCgkJcy0wLjYsMC41LTEuMSwwLjVjMC4yLDAuMSwwLjUsMC4zLDAuNiwwLjVzMC40LDAuNSwwLjcsMC45bDAuNywxLjFoLTEuNGwtMC44LTEuMmMtMC4zLTAuNC0wLjUtMC43LTAuNi0wLjhzLTAuMi0wLjItMC4zLTAuMg0KCQlzLTAuMy0wLjEtMC42LTAuMWgtMC4ydjIuNEg5Ljd6IE0xMC45LDMxLjRoMC45YzAuNiwwLDAuOSwwLDEtMC4xczAuMi0wLjEsMC4zLTAuMnMwLjEtMC4zLDAuMS0wLjRjMC0wLjItMC4xLTAuMy0wLjItMC41DQoJCVMxMi44LDMwLDEyLjYsMzBjLTAuMSwwLTAuNCwwLTAuOCwwaC0wLjlWMzEuNHoiLz4NCgk8cGF0aCBpZD0iWE1MSURfNjVfIiBkPSJNMTUuNSwzNC44VjI5aDEuMnYyLjVMMTksMjloMS42bC0yLjIsMi4ybDIuMywzLjVoLTEuNWwtMS42LTIuN2wtMC45LDF2MS43SDE1LjV6Ii8+DQo8L2c+DQo8ZyBpZD0iWE1MSURfMjdfIj4NCgk8cGF0aCBpZD0iWE1MSURfMjhfIiBjbGFzcz0ic3QxIiBkPSJNNy4zLDMuN2MwLDAuMS0wLjEsMC4yLTAuMiwwLjJjLTAuMiwwLTAuMy0wLjEtMC4zLTAuNGMwLTAuNCwwLTAuNywwLjEtMQ0KCQljMC0wLjIsMC4xLTAuNCwwLjEtMC42YzAtMC4xLDAtMC4xLDAtMC4xUzcsMS43LDcuMSwxLjdjMC4yLDAsMC4zLDAuMSwwLjMsMC40YzAsMC4xLDAsMC4zLTAuMSwwLjZjMCwwLjItMC4xLDAuMy0wLjEsMC40DQoJCWMwLjQtMC44LDAuNy0xLjIsMS0xLjJjMC4xLDAsMC4yLDAsMC4zLDAuMXMwLjEsMC4zLDAuMSwwLjZjMCwwLjMsMCwwLjUsMCwwLjVjMCwwLDAuMS0wLjEsMC4yLTAuNEM5LjEsMi4zLDkuMiwyLjEsOS4zLDINCgkJczAuMi0wLjIsMC4zLTAuMkM5LjgsMS44LDkuOSwxLjksMTAsMnMwLjEsMC4zLDAuMSwwLjZjMCwwLjIsMCwwLjQsMC4xLDAuNXMwLjEsMC4yLDAuMiwwLjJjMC4xLDAsMC4xLDAuMSwwLjEsMC4xDQoJCWMwLDAuMSwwLDAuMS0wLjEsMC4ycy0wLjEsMC4xLTAuMiwwLjFjLTAuMSwwLTAuMi0wLjEtMC4zLTAuMlM5LjcsMy4yLDkuNywyLjhjMC0wLjIsMC0wLjMsMC0wLjRzMC0wLjEtMC4xLTAuMWMwLDAtMC4xLDAtMC4xLDAuMQ0KCQlTOS4zLDIuOCw5LjIsMy4xQzksMy4zLDguOSwzLjUsOC44LDMuNlM4LjcsMy43LDguNiwzLjdjLTAuMSwwLTAuMiwwLTAuMi0wLjFTOC4yLDMuMyw4LjIsMi45YzAtMC40LDAtMC41LTAuMS0wLjUNCgkJQzguMSwyLjQsOCwyLjUsNy44LDIuOVM3LjQsMy41LDcuMywzLjd6Ii8+DQoJPHBhdGggaWQ9IlhNTElEXzMwXyIgY2xhc3M9InN0MSIgZD0iTTEyLjUsMy4yYzAsMC4xLTAuMSwwLjMtMC4zLDAuNXMtMC41LDAuMy0wLjgsMC4zYy0wLjIsMC0wLjQtMC4xLTAuNS0wLjJzLTAuMi0wLjMtMC4yLTAuNg0KCQljMC0wLjQsMC4xLTAuNywwLjQtMXMwLjUtMC41LDAuOC0wLjVjMC4xLDAsMC4zLDAsMC40LDAuMXMwLjEsMC4yLDAuMSwwLjNjMCwwLjItMC4xLDAuNC0wLjMsMC42cy0wLjUsMC4zLTAuOCwwLjQNCgkJYzAsMC0wLjEsMC0wLjEsMC4xYzAsMC4xLDAsMC4xLDAuMSwwLjJzMC4xLDAuMSwwLjIsMC4xYzAuMywwLDAuNS0wLjEsMC44LTAuNGMwLTAuMSwwLjEtMC4xLDAuMS0wLjFDMTIuNSwzLDEyLjUsMy4xLDEyLjUsMy4yeg0KCQkgTTExLjIsMi44YzAuMiwwLDAuNC0wLjEsMC41LTAuM1MxMiwyLjMsMTIsMi4yYzAsMCwwLTAuMSwwLTAuMXMtMC4xLDAtMC4xLDBjLTAuMSwwLTAuMiwwLjEtMC40LDAuMlMxMS4zLDIuNiwxMS4yLDIuOHoiLz4NCgk8cGF0aCBpZD0iWE1MSURfMzNfIiBjbGFzcz0ic3QxIiBkPSJNMTMsMi42TDEzLDIuNkMxMywyLjMsMTMsMi4yLDEzLDIuMmMwLTAuMSwwLTAuMiwwLjEtMC4yczAuMS0wLjEsMC4yLTAuMWMwLjEsMCwwLjIsMCwwLjIsMC4xDQoJCVMxMy42LDIsMTMuNiwyczAsMC4yLTAuMSwwLjNsMCwwYy0wLjEsMC4zLTAuMSwwLjUtMC4xLDAuNnMwLDAuMywwLDAuNGMwLDAuMSwwLDAuMiwwLDAuM2MwLDAsMCwwLDAsMC4xYzAsMCwwLDAuMS0wLjEsMC4xDQoJCVMxMy4yLDQsMTMuMSw0Yy0wLjIsMC0wLjMtMC4xLTAuMy0wLjRjMC0wLjIsMC0wLjUsMC4xLTAuOEMxMywyLjcsMTMsMi42LDEzLDIuNnogTTEzLjksMC45YzAsMC4xLDAsMC4yLTAuMSwwLjJzLTAuMiwwLjEtMC4yLDAuMQ0KCQljLTAuMSwwLTAuMSwwLTAuMi0wLjFTMTMuMywxLjEsMTMuMywxYzAtMC4xLDAtMC4yLDAuMS0wLjJzMC4xLTAuMSwwLjMtMC4xYzAuMSwwLDAuMiwwLDAuMiwwLjFTMTMuOSwwLjksMTMuOSwwLjl6Ii8+DQoJPHBhdGggaWQ9IlhNTElEXzM2XyIgY2xhc3M9InN0MSIgZD0iTTE1LjYsMy42Yy0wLjEtMC4xLTAuMS0wLjMtMC4xLTAuN2MwLTAuMy0wLjEtMC41LTAuMi0wLjVjLTAuMSwwLTAuMywwLjItMC41LDAuNQ0KCQlzLTAuNCwwLjYtMC40LDAuOGMwLDAsMCwwLjEtMC4xLDAuMXMtMC4xLDAtMC4xLDBjLTAuMiwwLTAuMy0wLjEtMC4zLTAuM2MwLTAuMSwwLTAuMiwwLjEtMC40YzAuMS0wLjMsMC4xLTAuNiwwLjEtMQ0KCQljMC0wLjEsMC0wLjEsMC4xLTAuMnMwLjEtMC4xLDAuMi0wLjFjMC4xLDAsMC4xLDAsMC4yLDAuMXMwLjEsMC4xLDAuMSwwLjNjMCwwLjEsMCwwLjQtMC4xLDAuN2MwLjMtMC43LDAuNi0xLDAuOS0xDQoJCWMwLjMsMCwwLjUsMC4yLDAuNSwwLjdDMTYsMy4xLDE2LDMuNCwxNi4xLDMuNGMwLDAsMC4xLDAsMC4xLDBjMCwwLDAuMSwwLDAuMSwwYzAuMSwwLDAuMSwwLDAuMSwwLjFjMCwwLjEsMCwwLjEtMC4xLDAuMg0KCQlTMTYuMSwzLjgsMTYsMy44QzE1LjgsMy44LDE1LjcsMy43LDE1LjYsMy42TDE1LjYsMy42eiIvPg0KPC9nPg0KPC9zdmc+DQo=" alt="meinDRK CLI"/>
+  </div>
+
+  <div class="url-bar" onclick="toggleUrl()">
+    <span>🌐 <strong id="url-display">meindrk.team</strong></span>
+    <a id="url-toggle-link">ändern ▾</a>
+  </div>
+  <div class="url-expanded" id="url-expanded">
+    <label style="margin-top:0">Server-URL</label>
+    <input id="url-input" type="url" value="https://meindrk.team" oninput="onUrlChange(this.value)"/>
+    <div class="hint">Standard: https://meindrk.team</div>
+  </div>
+
+  <label>Kreisverband</label>
+  <select id="kv-select">
+<optgroup label="Landesverband BW">
+  <option value="19">DRK Aalen</option>
+  <option value="40">DRK Bad Mergentheim</option>
+  <option value="12">DRK Biberach</option>
+  <option value="26">DRK Bodenseekreis</option>
+  <option value="41">DRK Buchen</option>
+  <option value="20">DRK Böblingen</option>
+  <option value="30">DRK Calw</option>
+  <option value="24">DRK Esslingen</option>
+  <option value="23">DRK Freudenstadt</option>
+  <option value="25">DRK Göppingen</option>
+  <option value="15">DRK Heidenheim</option>
+  <option value="1">DRK Heilbronn</option>
+  <option value="17">DRK Hohenlohe</option>
+  <option value="42">DRK Karlsruhe</option>
+  <option value="3">DRK Ludwigsburg</option>
+  <option value="22">DRK Mannheim</option>
+  <option value="5">DRK Mosbach</option>
+  <option value="36">DRK Nürtingen-Kirchheim/Teck</option>
+  <option value="10">DRK Pforzheim</option>
+  <option value="29">DRK Ravensburg</option>
+  <option value="43">DRK Rems-Murr</option>
+  <option value="27">DRK Reutlingen</option>
+  <option value="14">DRK Rhein-Neckar/Heidelberg</option>
+  <option value="7">DRK Rottweil</option>
+  <option value="9">DRK Schwäbisch Gmünd</option>
+  <option value="16">DRK Schwäbisch Hall</option>
+  <option value="28">DRK Sigmaringen</option>
+  <option value="18">DRK Stuttgart</option>
+  <option value="4">DRK Tauberbischofsheim</option>
+  <option value="2">DRK Tuttlingen</option>
+  <option value="21">DRK Tübingen</option>
+  <option value="11">DRK Ulm</option>
+  <option value="8">DRK Wangen</option>
+  <option value="13">DRK Zollernalb</option>
+  <option value="6">Landesverband BW</option>
+</optgroup>
+<optgroup label="Oberleitstelle BW">
+  <option value="81">Oberleitstelle BW</option>
+</optgroup>
+  </select>
+
+  <label>Benutzername</label>
+  <input type="text" placeholder="admin" autocomplete="username"/>
+
+  <label>Passwort</label>
+  <input type="password" placeholder="••••••••" autocomplete="current-password"/>
+
+  <button class="btn">Anmelden</button>
+</div>
+
+<script>
+function toggleUrl() {
+  var el = document.getElementById("url-expanded");
+  var link = document.getElementById("url-toggle-link");
+  var open = el.classList.toggle("open");
+  link.textContent = open ? "einklappen ▴" : "ändern ▾";
+}
+
+function onUrlChange(val) {
+  try {
+    var host = new URL(val).hostname || val;
+    document.getElementById("url-display").textContent = host;
+  } catch(e) {}
+  loadKvs(val);
+}
+
+function loadKvs(baseUrl) {
+  baseUrl = baseUrl.replace(/\/+$/, "");
+  var sel = document.getElementById("kv-select");
+  sel.innerHTML = "<option disabled selected>Lade…</option>";
+  var script = document.createElement("script");
+  script.src = baseUrl + "/js/kreisverbaende.js?_=" + Date.now();
+  script.onload = function() {
+    if (window.kreisverbaende) populateKvs(window.kreisverbaende);
+    document.head.removeChild(script);
+  };
+  script.onerror = function() {
+    sel.innerHTML = "<option disabled selected>Nicht erreichbar</option>";
+    document.head.removeChild(script);
+  };
+  document.head.appendChild(script);
+}
+
+function populateKvs(list) {
+  var sel = document.getElementById("kv-select");
+  var groups = {};
+  list.filter(function(k){ return k.active; }).forEach(function(k){
+    if (!groups[k.organisation]) groups[k.organisation] = [];
+    groups[k.organisation].push(k);
+  });
+  var html = "";
+  Object.keys(groups).sort().forEach(function(org){
+    html += "<optgroup label='" + org + "'>";
+    groups[org].sort(function(a,b){ return a.name.localeCompare(b.name); }).forEach(function(k){
+      html += "<option value='" + k.id + "'>"+k.name+"</option>";
+    });
+    html += "</optgroup>";
+  });
+  sel.innerHTML = html;
+}
+</script>
+</body>
+</html>

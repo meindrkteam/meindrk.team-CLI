@@ -1,0 +1,90 @@
+<h2>Login-Flow (final)</h2>
+<p class="subtitle">Maske 1 mit allen Feldern · Maske 2 nur für 2FA</p>
+
+<div class="split" style="gap:24px;align-items:flex-start">
+
+  <div class="mockup" style="flex:1">
+    <div class="mockup-header">Maske 1 — Login &amp; Konfiguration</div>
+    <div class="mockup-body" style="font-family:sans-serif;font-size:12px;padding:18px">
+      <div style="text-align:center;margin-bottom:16px">
+        <img src="file:///D:/javasrc/workspace/kreisalarm.de/Untitled-2%20Kopie.svg" style="height:48px;max-width:180px;object-fit:contain" alt="meinDRK CLI"/>
+      </div>
+      <div style="margin-bottom:8px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:2px">Server-URL</label>
+        <input style="width:100%;box-sizing:border-box;border:1px solid #ced4da;border-radius:4px;padding:5px 8px;font-size:12px" placeholder="https://meinserver.kreisalarm.de"/>
+      </div>
+      <div style="margin-bottom:8px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:2px">Benutzername</label>
+        <input style="width:100%;box-sizing:border-box;border:1px solid #ced4da;border-radius:4px;padding:5px 8px;font-size:12px" placeholder="admin"/>
+      </div>
+      <div style="margin-bottom:8px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:2px">Passwort</label>
+        <input type="password" style="width:100%;box-sizing:border-box;border:1px solid #ced4da;border-radius:4px;padding:5px 8px;font-size:12px" placeholder="••••••••"/>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:2px">Standard-Kreisverband</label>
+        <select style="width:100%;box-sizing:border-box;border:1px solid #ced4da;border-radius:4px;padding:5px 8px;font-size:12px;background:#fff;color:#6c757d">
+          <option disabled selected>— wird nach dem Login geladen —</option>
+        </select>
+        <div style="font-size:10px;color:#adb5bd;margin-top:2px">Wird beim ersten Login automatisch befüllt</div>
+      </div>
+      <button style="width:100%;background:#cc0000;color:#fff;border:none;border-radius:4px;padding:7px;font-size:12px;cursor:pointer;font-weight:bold">Anmelden</button>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;font-size:22px;color:#adb5bd;padding-top:90px">→</div>
+
+  <div class="mockup" style="flex:1">
+    <div class="mockup-header">Maske 1 nach Login — KV-Auswahl aktiv</div>
+    <div class="mockup-body" style="font-family:sans-serif;font-size:12px;padding:18px">
+      <div style="text-align:center;margin-bottom:16px">
+        <img src="file:///D:/javasrc/workspace/kreisalarm.de/Untitled-2%20Kopie.svg" style="height:48px;max-width:180px;object-fit:contain" alt="meinDRK CLI"/>
+      </div>
+      <div style="margin-bottom:8px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:2px">Server-URL</label>
+        <input style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:4px;padding:5px 8px;font-size:12px;background:#f8f9fa;color:#6c757d" value="https://meinserver.kreisalarm.de" readonly/>
+      </div>
+      <div style="margin-bottom:8px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:2px">Benutzername</label>
+        <input style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:4px;padding:5px 8px;font-size:12px;background:#f8f9fa;color:#6c757d" value="admin" readonly/>
+      </div>
+      <div style="margin-bottom:8px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:2px">Passwort</label>
+        <input type="password" style="width:100%;box-sizing:border-box;border:1px solid #dee2e6;border-radius:4px;padding:5px 8px;font-size:12px;background:#f8f9fa" value="geheim" readonly/>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:2px">Standard-Kreisverband</label>
+        <select style="width:100%;box-sizing:border-box;border:2px solid #cc0000;border-radius:4px;padding:5px 8px;font-size:12px;background:#fff">
+          <option>KV Musterstadt (ID: 42)</option>
+          <option>KV Beispielkreis (ID: 17)</option>
+          <option>KV Testdorf (ID: 99)</option>
+        </select>
+      </div>
+      <button style="width:100%;background:#198754;color:#fff;border:none;border-radius:4px;padding:7px;font-size:12px;cursor:pointer;font-weight:bold">Speichern &amp; weiter →</button>
+      <button style="width:100%;background:transparent;color:#6c757d;border:none;padding:4px;font-size:11px;cursor:pointer;margin-top:4px">← Andere Zugangsdaten eingeben</button>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;font-size:22px;color:#adb5bd;padding-top:90px">→</div>
+
+  <div class="mockup" style="flex:1">
+    <div class="mockup-header">Maske 2 — 2FA (nur wenn nötig)</div>
+    <div class="mockup-body" style="font-family:sans-serif;font-size:12px;padding:18px">
+      <div style="text-align:center;margin-bottom:16px">
+        <img src="file:///D:/javasrc/workspace/kreisalarm.de/Untitled-2%20Kopie.svg" style="height:48px;max-width:180px;object-fit:contain" alt="meinDRK CLI"/>
+      </div>
+      <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px;margin-bottom:14px;text-align:center">
+        <div style="font-size:13px;margin-bottom:3px">🔐</div>
+        <div style="font-size:11px;color:#856404;font-weight:bold">Zwei-Faktor-Authentifizierung</div>
+        <div style="font-size:10px;color:#856404;margin-top:2px">Bitte gib deinen Google Authenticator<br>oder E-Mail-Code ein</div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;color:#6c757d;margin-bottom:4px;text-align:center">6-stelliger Code</label>
+        <input style="width:100%;box-sizing:border-box;border:2px solid #ffc107;border-radius:6px;padding:10px 8px;font-size:22px;text-align:center;letter-spacing:10px;font-family:monospace" placeholder="······" maxlength="6"/>
+      </div>
+      <button style="width:100%;background:#cc0000;color:#fff;border:none;border-radius:4px;padding:7px;font-size:12px;cursor:pointer;font-weight:bold">Bestätigen</button>
+      <button style="width:100%;background:transparent;color:#6c757d;border:none;padding:4px;font-size:11px;cursor:pointer;margin-top:4px">← Zurück</button>
+    </div>
+  </div>
+
+</div>

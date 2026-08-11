@@ -1,0 +1,80 @@
+<h2>Welches GUI-Layout bevorzugst du?</h2>
+<p class="subtitle">Wird geöffnet wenn die exe per Doppelklick gestartet wird</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="font-family:monospace;font-size:11px;background:#1e1e2e;color:#cdd6f4;padding:12px;border-radius:6px;line-height:1.6">
+        <div style="background:#313244;border-radius:4px;padding:6px 8px;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+          <span style="color:#89b4fa;font-size:10px">Befehl:</span>
+          <span style="flex:1;background:#1e1e2e;padding:3px 6px;border-radius:3px;color:#a6e3a1">person list --q Müller</span>
+          <span style="background:#89b4fa;color:#1e1e2e;padding:3px 8px;border-radius:3px;font-weight:bold;cursor:pointer">▶ Go</span>
+        </div>
+        <div style="background:#313244;border-radius:4px;padding:6px 8px;font-size:10px;color:#6c7086;margin-bottom:4px">Ergebnis:</div>
+        <div style="background:#181825;border-radius:4px;padding:8px;min-height:80px;color:#cdd6f4;font-size:10px">
+          id  | nachname | vorname | status<br>
+          ----+----------+---------+-------<br>
+          123 | Müller   | Hans    | aktiv<br>
+          456 | Müller   | Eva     | aktiv
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Minimal (Kommandozeile)</h3>
+      <p>Eingabefeld + Go-Button oben, Ergebnis als Text darunter. Genau wie beschrieben. Einfach, schnell.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="font-family:sans-serif;font-size:11px;background:#f8f9fa;color:#212529;padding:12px;border-radius:6px;line-height:1.6">
+        <div style="background:#fff;border:1px solid #dee2e6;border-radius:4px;padding:6px 8px;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+          <select style="border:1px solid #ced4da;border-radius:3px;padding:2px 4px;font-size:10px;background:#fff">
+            <option>person list</option>
+            <option>gruppe list</option>
+            <option>benutzer list</option>
+          </select>
+          <span style="color:#6c757d;font-size:10px">--q</span>
+          <input style="border:1px solid #ced4da;border-radius:3px;padding:2px 4px;font-size:10px;flex:1" placeholder="Müller"/>
+          <button style="background:#0d6efd;color:#fff;border:none;border-radius:3px;padding:3px 8px;font-size:10px">Suchen</button>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:10px">
+          <tr style="background:#e9ecef"><td style="padding:3px 5px;border:1px solid #dee2e6">id</td><td style="padding:3px 5px;border:1px solid #dee2e6">Nachname</td><td style="padding:3px 5px;border:1px solid #dee2e6">Vorname</td></tr>
+          <tr><td style="padding:3px 5px;border:1px solid #dee2e6">123</td><td style="padding:3px 5px;border:1px solid #dee2e6">Müller</td><td style="padding:3px 5px;border:1px solid #dee2e6">Hans</td></tr>
+          <tr style="background:#f8f9fa"><td style="padding:3px 5px;border:1px solid #dee2e6">456</td><td style="padding:3px 5px;border:1px solid #dee2e6">Müller</td><td style="padding:3px 5px;border:1px solid #dee2e6">Eva</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Formular mit Tabelle</h3>
+      <p>Befehl als Dropdown + Suchfeld. Ergebnis als echte HTML-Tabelle. Einsteigerfreundlicher, aber mehr Aufwand.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="font-family:monospace;font-size:11px;background:#0d1117;color:#e6edf3;padding:12px;border-radius:6px;line-height:1.6">
+        <div style="display:flex;gap:4px;margin-bottom:8px">
+          <span style="background:#3d444d;padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer">person list</span>
+          <span style="background:#58a6ff;color:#0d1117;padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer">gruppe list</span>
+          <span style="background:#3d444d;padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer">benutzer list</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <input style="background:#161b22;border:1px solid #30363d;color:#e6edf3;border-radius:4px;padding:4px 8px;font-size:10px;flex:1;font-family:monospace" placeholder="--kvid 42  --q Müller"/>
+          <button style="background:#238636;color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:10px;cursor:pointer">▶</button>
+        </div>
+        <div style="background:#161b22;border-radius:4px;padding:8px;min-height:80px;border:1px solid #30363d;font-size:10px;color:#7d8590">
+          id | projektID | name<br>
+          <span style="color:#e6edf3">42 | 1        | Bereitschaft Nord<br>
+          43 | 1        | Bereitschaft Süd</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Dark Mode Terminal-Look</h3>
+      <p>Befehl per Tab-Buttons wählen, Argumente als Freitext. Ergebnis im Terminal-Stil. Zwischen A und B.</p>
+    </div>
+  </div>
+
+</div>

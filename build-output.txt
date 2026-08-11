@@ -1,0 +1,81 @@
+
+=== meinDRK CLI Build ===
+
+[GraalVM] Lokal gecacht
+[VS] vcvarsall.bat: C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat
+**********************************************************************
+** Visual Studio 2022 Developer Command Prompt v17.0
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x64'
+
+[1/4] Kompiliere Java-Quellen...
+    OK
+
+[2/4] Baue Fat-JAR...
+    OK
+
+[3/4] Baue Windows x64 Binary...
+========================================================================================================================
+GraalVM Native Image: Generating 'meindrk-cli-windows-x64' (executable)...
+========================================================================================================================
+For detailed information and explanations on the build output, visit:
+https://github.com/oracle/graal/blob/master/docs/reference-manual/native-image/BuildOutput.md
+------------------------------------------------------------------------------------------------------------------------
+[1/8] Initializing...                                                                                   (10,0s @ 0,10GB)
+ Java version: 21.0.2+13, vendor version: GraalVM CE 21.0.2+13.1
+ Graal compiler: optimization level: 2, target machine: x86-64-v3
+ C compiler: cl.exe (microsoft, x64, 19.44.35227)
+ Garbage collector: Serial GC (max heap size: 80% of RAM)
+ 1 user-specific feature(s):
+ - com.oracle.svm.thirdparty.gson.GsonFeature
+------------------------------------------------------------------------------------------------------------------------
+ 2 experimental option(s) unlocked:
+ - '-H:Name' (alternative API option(s): -o meindrk-cli-windows-x64; origin(s): command line)
+ - '-H:Path' (origin(s): command line)
+------------------------------------------------------------------------------------------------------------------------
+Build resources:
+ - 26,49GB of memory (41,6% of 63,73GB system memory, determined at start)
+ - 16 thread(s) (100,0% of 16 available processor(s), determined at start)
+[2/8] Performing analysis...  [******]                                                                  (15,1s @ 0,70GB)
+    8.147 reachable types   (83,4% of    9.771 total)
+   11.953 reachable fields  (58,3% of   20.518 total)
+   40.149 reachable methods (56,3% of   71.266 total)
+    2.569 types,   102 fields, and 2.221 methods registered for reflection
+       74 types,    54 fields, and    67 methods registered for JNI access
+        4 native libraries: crypt32, ncrypt, version, winhttp
+[3/8] Building universe...                                                                               (3,2s @ 0,77GB)
+[4/8] Parsing methods...      [*]                                                                        (1,5s @ 0,88GB)
+[5/8] Inlining methods...     [***]                                                                      (1,4s @ 0,46GB)
+[6/8] Compiling methods...    [****]                                                                    (12,8s @ 0,84GB)
+[7/8] Layouting methods...    [**]                                                                       (3,1s @ 0,97GB)
+[8/8] Creating image...       [**]                                                                       (3,8s @ 1,02GB)
+  18,56MB (49,26%) for code area:    25.189 compilation units
+  18,83MB (49,97%) for image heap:  217.894 objects and 51 resources
+ 298,64kB ( 0,77%) for other data
+  37,69MB in total
+------------------------------------------------------------------------------------------------------------------------
+Top 10 origins of code area:                                Top 10 object types in image heap:
+  11,55MB java.base                                            5,51MB byte[] for code metadata
+   2,38MB meindrk-cli.jar                                      2,91MB byte[] for java.lang.String
+   1,35MB java.net.http                                        2,06MB java.lang.String
+   1,26MB svm.jar (Native Image)                               1,91MB java.lang.Class
+ 352,37kB java.rmi                                           700,13kB com.oracle.svm.core.hub.DynamicHubCompanion
+ 326,63kB jdk.crypto.ec                                      699,02kB byte[] for general heap data
+ 207,24kB java.naming                                        454,69kB byte[] for reflection metadata
+ 206,38kB java.xml                                           411,59kB java.lang.String[]
+ 140,17kB jdk.naming.dns                                     368,05kB heap alignment
+ 122,12kB java.logging                                       332,63kB java.lang.Object[]
+ 531,26kB for 16 more packages                                 3,55MB for 2034 more object types
+------------------------------------------------------------------------------------------------------------------------
+Recommendations:
+ INIT: Adopt '--strict-image-heap' to prepare for the next GraalVM release.
+ HEAP: Set max heap for improved and more predictable memory usage.
+ CPU:  Enable more CPU features with '-march=native' for improved performance.
+------------------------------------------------------------------------------------------------------------------------
+                        3,1s (5,9% of total time) in 204 GCs | Peak RSS: 1,79GB | CPU load: 8,12
+------------------------------------------------------------------------------------------------------------------------
+Produced artifacts:
+ D:\javasrc\workspace\kreisalarm.de\CLI\build\meindrk-cli-windows-x64.exe (executable)
+========================================================================================================================
+Finished generating 'meindrk-cli-windows-x64' in 51,7s.
