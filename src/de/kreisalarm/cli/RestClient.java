@@ -26,6 +26,9 @@ public class RestClient {
 
     private final Config config;
     private final HttpClient http;
+    //: Einmal je Prozess geholt, siehe currentUser(). null = nicht ermittelbar.
+    private JsonNode aktuellerBenutzer = null;
+    private boolean benutzerGeholt = false;
 
     public RestClient (Config config) throws Exception {
         this(config, false);
@@ -105,6 +108,34 @@ public class RestClient {
         JsonNode body = MAPPER.readTree (resp.body ());
         requireErfolg (body);
         return body;
+    }
+
+    /**
+     * Der Benutzer der laufenden Sitzung, oder null, wenn er sich nicht
+     * ermitteln laesst.
+     *
+     * <p>Gebraucht, um Objekte ins Verhaeltnis zum Aufrufer zu setzen — etwa ob
+     * ein Kalender ihm selbst, seinem Kreisverband oder einem fremden gehoert.
+     * Ohne das waere die Angabe nicht berechenbar: die CLI kennt sonst nur ihr
+     * Sitzungs-Cookie, nicht die Identitaet dahinter.
+     *
+     * <p>Das Ergebnis wird gemerkt — auch ein Fehlschlag. Ein zweiter Versuch
+     * je Aufruf wuerde nur denselben Fehler noch einmal kosten. Ein Fehlschlag
+     * wirft NICHT: eine Auflistung soll nicht daran scheitern, dass eine
+     * ergaenzende Angabe fehlt; sie faellt dann auf "unbekannt" zurueck.
+     */
+    public JsonNode currentUser () {
+        if (benutzerGeholt)
+            return aktuellerBenutzer;
+        benutzerGeholt = true;
+        try {
+            JsonNode n = get ("/backend/rest/current-user");
+            // Nicht angemeldet liefert {} — ein Objekt ohne id ist kein Benutzer.
+            aktuellerBenutzer = (n != null && n.isObject () && n.hasNonNull ("id")) ? n : null;
+        } catch (Exception e) {
+            aktuellerBenutzer = null;
+        }
+        return aktuellerBenutzer;
     }
 
     public JsonNode post (String path, ObjectNode body) throws Exception {
