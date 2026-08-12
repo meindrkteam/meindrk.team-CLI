@@ -30,7 +30,7 @@ public class CLI {
     private static final ObjectMapper MAPPER = new ObjectMapper ();
 
     /** Muss beim Release mit dem Git-Tag uebereinstimmen. */
-    private static final String CLI_VERSION = "0.1.13";
+    private static final String CLI_VERSION = "0.1.14";
 
     public static void main (String[] args) throws Exception {
         boolean json = hasFlag (args, "--json");
@@ -543,6 +543,20 @@ public class CLI {
         if (arg (args, "--start", null) == null)    { exitWithError ("--start erforderlich.", json); return; }
         if (arg (args, "--end", null) == null)      { exitWithError ("--end erforderlich.", json); return; }
         ObjectNode body = terminBody (args);
+        // recurrence MUSS mit, sonst scheitert das Anlegen serverseitig.
+        // CalendarService.doSaveCalendarEvent liest bei fehlendem Feld den Wert
+        // vom BESTEHENDEN Termin -- und bei einem neuen gibt es keinen:
+        //
+        //   CalendarEvent e = isNew ? null : ...getObjectByID (...);
+        //   String recurrence = in.has ("recurrence") ? ... : e.getRecurrence ();
+        //
+        // Das ist eine NullPointerException fuer jeden Aufrufer, der das Feld
+        // weglaesst (2026-08-12, Abfrage 71). Leer heisst "kein Serientermin" --
+        // genau das, was die CLI anlegt.
+        //
+        // NUR beim Anlegen. Bei termin_update waere ein leeres recurrence eine
+        // Aussage: es machte aus einem Serientermin still einen Einzeltermin.
+        body.put ("recurrence", "");
         JsonNode result = client.post ("/backend/rest/CalendarEvent", body);
         printResult (result, null, json);
     }

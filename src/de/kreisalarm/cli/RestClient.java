@@ -176,11 +176,12 @@ public class RestClient {
         /** POST auf einen schreibenden Endpunkt. Siehe {@link #multipartJson}: der
          *  Koerper ist multipart mit dem Feld {@code json}, nicht rohes JSON. */
     public JsonNode post (String path, ObjectNode body) throws Exception {
+        String grenze = neueGrenze ();
         HttpRequest req = HttpRequest.newBuilder ()
             .uri (URI.create (config.getUrl () + path))
             .header ("Cookie", "JSESSIONID=" + config.getSession ())
-            .header ("Content-Type", "application/json")
-            .POST (HttpRequest.BodyPublishers.ofString (body.toString (), StandardCharsets.UTF_8))
+            .header ("Content-Type", "multipart/form-data; boundary=" + grenze)
+            .POST (multipartJson (body, grenze))
             .build ();
         HttpResponse<String> resp = http.send (req, HttpResponse.BodyHandlers.ofString ());
         requireOk (resp);
