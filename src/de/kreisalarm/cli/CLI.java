@@ -30,7 +30,7 @@ public class CLI {
     private static final ObjectMapper MAPPER = new ObjectMapper ();
 
     /** Muss beim Release mit dem Git-Tag uebereinstimmen. */
-    private static final String CLI_VERSION = "0.1.12";
+    private static final String CLI_VERSION = "0.1.13";
 
     public static void main (String[] args) throws Exception {
         boolean json = hasFlag (args, "--json");
@@ -115,6 +115,9 @@ public class CLI {
                 break;
             case "kalender":
                 runKalender (client, args, json);
+                break;
+            case "ort":
+                runOrt (client, args, json);
                 break;
             case "termin":
                 runTermin (client, args, json);
@@ -302,6 +305,47 @@ public class CLI {
         // Rauschen: besitz und schreiben sind daraus bereits berechnet, die
         // Rohdaten kosten nur Kontext und verduennen die Aufmerksamkeit.
         printResult (nurSpalten (root, spalten), spalten, json);
+    }
+
+    /**
+     * Veranstaltungsorte auflisten.
+     *
+     * <p>Warum es das gibt: {@code termin_create --ort} erwartet eine ID, und
+     * bis CLI 0.1.12 gab es keinen Weg, sie zu bekommen. Am 2026-08-12 reichte
+     * das Modell darum den Ortsnamen "Heilbronn" als ID durch (Abfrage 6t) und
+     * musste im naechsten Zug einraeumen, dass es keine Liste abrufen kann
+     * (6u). Ein Pflichtwert ohne Nachschlagewerk ist eine Einladung zum Raten.
+     *
+     * <p>Der Endpunkt liefert die Orte des eigenen Kreisverbands (plus den
+     * Datensatz mit id=1, den der Server immer mitgibt). Gezeigt werden nur
+     * die Felder, mit denen ein Mensch einen Ort wiedererkennt — die Extended-
+     * Sicht bringt zusaetzlich Ansprechpartner, Telefonnummern, Koordinaten
+     * und SSIDs mit, und das ist fuer die Auswahl eines Ortes nur Rauschen.
+     */
+    private static void runOrt (RestClient client, String[] args, boolean json) throws Exception {
+        String q = arg (args, "--q", null);
+        JsonNode result = client.getList ("DpVeranstaltungOrt", 1000, q, "name", null, null);
+        String[] spalten = {"id", "name", "strasse", "plz", "ort"};
+        printResult (nurSpalten (ohneNamenlose (result.path ("root")), spalten), spalten, json);
+    }
+
+    /**
+     * Wirft Ortsdatensaetze ohne Bezeichnung weg.
+     *
+     * <p>Der Endpunkt liefert wegen seiner Bedingung {@code id=1 or projektID=?}
+     * immer den Datensatz mit der ID 1 mit; er hat keinen Namen und keine
+     * Adresse. Ein namenloser Eintrag ist nicht waehlbar — sichtbar waere er
+     * nur eine leere Zeile, und ein Modell koennte auf die Idee kommen, ihn zu
+     * nehmen. "Kein Ort" wird ausgedrueckt, indem --ort weggelassen wird.
+     */
+    private static JsonNode ohneNamenlose (JsonNode root) {
+        if (root == null || !root.isArray ())
+            return root;
+        ArrayNode out = MAPPER.createArrayNode ();
+        for (JsonNode o : root)
+            if (!o.path ("name").asText ("").isBlank ())
+                out.add (o);
+        return out;
     }
 
     /** Reduziert eine Trefferliste auf die angegebenen Felder. */
@@ -732,6 +776,14 @@ public class CLI {
             + "den Benutzer aus der Sitzung und liefert dann alle zugaenglichen Kalender. "
             + "Den Benutzer NIEMALS nach einem Kreisverband fragen.");
 
+        ObjectNode ortList = befehl (cmds, "ort_list",
+            "Veranstaltungsorte des Kreisverbands auflisten. Liefert die ort-ID fuer "
+            + "termin_create und termin_update. Je Ort: name (Bezeichnung, z. B. "
+            + "\"DRK-Heim\"), strasse, plz und ort (die Stadt). Ohne diesen Aufruf "
+            + "gibt es keinen Weg zu einer gueltigen Orts-ID.", "lesen");
+        param (ortList, "q", "string", false, null, "flag",
+            "Suchtext in der Bezeichnung (Teiltreffer). Leer = alle Orte.");
+
         befehl (cmds, "projekt_list",
             "Alle Kreisverbaende (Projekte) auflisten, auf die der Benutzer Zugriff hat.", "lesen");
 
@@ -755,7 +807,7 @@ public class CLI {
         param (terminCreate, "endTime",                 "string", false, null,    "flag", "Endzeit, Format hhmm");
         param (terminCreate, "description",             "string", false, null,    "flag", "Beschreibungstext");
         param (terminCreate, "type",                    "string", false, null,    "flag", "Freitext-Kategorie");
-        param (terminCreate, "ort",                     "string", false, null,    "flag", "DpVeranstaltungOrt-ID");
+        param (terminCreate, "ort",                     "string", false, null,    "flag", "Orts-ID (aus ort_list). NIEMALS einen Ortsnamen hier einsetzen - der Server erwartet eine Zahl.");
         param (terminCreate, "tags",                    "string", false, null,    "flag", "Kommagetrennte Tags");
         param (terminCreate, "feedback",                "string", false, null, "flag", "NONE|ALL|INVITED");
         param (terminCreate, "allowFreeRegistration",   "string", false, null, "flag", "true|false");
@@ -773,7 +825,7 @@ public class CLI {
         param (terminUpdate, "endTime",                  "string", false, null,    "flag", "Endzeit, Format hhmm");
         param (terminUpdate, "description",              "string", false, null,    "flag", "Beschreibungstext");
         param (terminUpdate, "type",                     "string", false, null,    "flag", "Freitext-Kategorie");
-        param (terminUpdate, "ort",                      "string", false, null,    "flag", "DpVeranstaltungOrt-ID");
+        param (terminUpdate, "ort",                      "string", false, null,    "flag", "Orts-ID (aus ort_list). NIEMALS einen Ortsnamen hier einsetzen - der Server erwartet eine Zahl.");
         param (terminUpdate, "tags",                     "string", false, null,    "flag", "Kommagetrennte Tags");
         param (terminUpdate, "feedback",                 "string", false, null,    "flag", "NONE|ALL|INVITED");
         param (terminUpdate, "allowFreeRegistration",    "string", false, null,    "flag", "true|false");
