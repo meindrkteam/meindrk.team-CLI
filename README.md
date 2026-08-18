@@ -26,6 +26,17 @@ Aufruf**, weil UPX das Image bei jedem Start entpackt (gemessen 90,9 ms gegen
 Abfrage als Unterprozess starten, nicht — dort die Variante **ohne** Suffix
 nehmen.
 
+**Windows-Binaries sind signiert.** Beide `.exe` tragen eine
+Authenticode-Signatur mit RFC3161-Zeitstempel; als Herausgeber steht das
+Certum-Open-Source-Zertifikat **„Open Source Developer, Heid Jörn“** darin.
+Windows zeigt also diesen Namen statt „Unbekannter Herausgeber“. Selbst prüfen:
+
+```powershell
+Get-AuthenticodeSignature .\meindrk-cli-windows-x64.exe | Format-List Status, SignerCertificate
+```
+`Status` muss `Valid` sein. Wer eine unsignierte oder abweichend signierte
+Datei erhält, hat sie nicht von der offiziellen Release-Seite.
+
 **Linux/macOS nach dem Download ausführbar machen:**
 ```bash
 chmod +x meindrk-cli-linux-x64

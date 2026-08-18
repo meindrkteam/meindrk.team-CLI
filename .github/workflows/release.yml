@@ -140,9 +140,16 @@ jobs:
         with:
           path: artifacts
 
-      - name: Create GitHub Release
+      # Draft, nicht veroeffentlicht: die Windows-.exe muss erst Authenticode-
+      # signiert werden, und der Schluessel liegt in Certums SimplySign-Cloud-HSM
+      # (interaktiver OTP-Login -> in der CI unmoeglich). Freigeschaltet wird das
+      # Release lokal am Mac mit tools/release-sign.sh <tag>: signieren, Kette
+      # pruefen, Assets ersetzen, Draft aus. So kann keine unsignierte .exe beim
+      # Nutzer landen.
+      - name: Create GitHub Release (Draft - wird von tools/release-sign.sh freigegeben)
         uses: softprops/action-gh-release@v2
         with:
+          draft: true
           files: |
             artifacts/meindrk-cli-windows-x64/*
             artifacts/meindrk-cli-linux-x64/*
