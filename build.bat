@@ -175,7 +175,11 @@ echo.
 echo [3/4] Baue Windows x64 Binary...
 mkdir "%BUILD_DIR%" 2>nul
 
-"%NATIVE_IMAGE%" -jar "%JAR_FILE%" ^
+:: "call" ist zwingend: native-image.cmd ist selbst ein Batch-Skript, und ein
+:: Batch-Skript, das ein anderes OHNE call startet, uebergibt die Kontrolle und
+:: kehrt nie zurueck. Ohne call endete build.bat still nach dem native-image-
+:: Lauf - die UPX-Variante und der Linux-Build darunter wurden nie ausgefuehrt.
+call "%NATIVE_IMAGE%" -jar "%JAR_FILE%" ^
     --no-fallback ^
     --enable-url-protocols=https ^
     -O1 ^
@@ -207,6 +211,12 @@ if not errorlevel 1 (
 :: ===========================================================================
 echo.
 echo [4/4] Linux x64 Binary...
+:: In der CI baut ein eigener ubuntu-Job das Linux-Binary; der Docker-Umweg
+:: ueber den Windows-Runner kann dort ohnehin keine Linux-Container starten.
+if defined CI (
+    echo     CI erkannt - Linux-Build laeuft in einem eigenen Job, uebersprungen.
+    goto :done
+)
 where docker >nul 2>&1
 if errorlevel 1 (
     echo     Docker nicht verfuegbar - Linux-Build uebersprungen.
